@@ -1,0 +1,4 @@
+suman:
+   server: <add fqdn of suse manager server>
+   user: <add user with rights to clone and update the channels>
+   password: <add the users password>
