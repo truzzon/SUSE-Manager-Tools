@@ -25,8 +25,8 @@ Note:
 - More packages will be added.
 
 
-# GNU Public License. No warranty. No Support 
-# For question/suggestions/bugs mail: michael.brookhuis@suse.com
-# Created by: SUSE Michael Brookhuis
+GNU Public License. No warranty. No Support 
+For question/suggestions/bugs mail: michael.brookhuis@suse.com
+Created by: SUSE Michael Brookhuis
 
 
