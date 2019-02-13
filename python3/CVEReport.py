@@ -175,7 +175,7 @@ def main():
                cve_data.append(cve)
                cve_data_collected.append(cve_data)
            create_file_cve_reverse(cve_data_collected,args.filename)
-           smtools.log_info("Completed." % cve)
+           smtools.log_info("Completed.")
     smtools.log_info("Result can be found in file %s" % args.filename)    
     smtools.suman_logout(client,session)
     smtools.close_program()
