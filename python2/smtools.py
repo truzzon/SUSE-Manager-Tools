@@ -98,6 +98,9 @@ def fatal_error(errtxt,rc=1):
 def log_info(txt):
     logger.info("| %s" % (txt))
 
+def log_warning(txt):
+    logger.warning("| %s" % (txt))
+
 def log_error(txt):
     logger.error("| %s" % (txt))
 
