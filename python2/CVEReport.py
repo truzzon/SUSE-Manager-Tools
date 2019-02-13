@@ -101,11 +101,10 @@ def main():
     cve_split=[]
     for i in args.cve.split(','):
       cve_split.append(i)
-    
+    cve_data_collected=[]
     for cve in cve_split:
         # Collecting a list of all systems that are vulnerable for this CVE
         cve_found=False
-        cve_data_collected=[]
         # If there are items found in the CVE-list, continue. If the list is empty, print error. Empty files will be created.
         if not args.reverse:
            try:
@@ -153,7 +152,6 @@ def main():
                cve_data.append(chan_list)
                cve_data.append(pack_list)
                cve_data_collected.append(cve_data)
-           create_file_cve(cve_data_collected,args.filename)
            smtools.log_info("Completed.")
         else:  
            try:
@@ -174,8 +172,13 @@ def main():
                    break
                cve_data.append(cve)
                cve_data_collected.append(cve_data)
-           create_file_cve_reverse(cve_data_collected,args.filename)
+           
            smtools.log_info("Completed.")
+           
+    if not args.reverse:
+       create_file_cve(cve_data_collected,args.filename)
+    else:
+       create_file_cve_reverse(cve_data_collected,args.filename)
     smtools.log_info("Result can be found in file %s" % args.filename)    
     smtools.suman_logout(client,session)
     smtools.close_program()
@@ -183,3 +186,4 @@ def main():
 
 if __name__ == "__main__":
     SystemExit(main())
+
