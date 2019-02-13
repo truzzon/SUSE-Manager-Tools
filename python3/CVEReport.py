@@ -154,7 +154,7 @@ def main():
                cve_data.append(pack_list)
                cve_data_collected.append(cve_data)
            create_file_cve(cve_data_collected,args.filename)
-           smtools.log_info("Completed." % cve)
+           smtools.log_info("Completed.")
         else:  
            try:
                cve_list = client.audit.listSystemsByPatchStatus(session,cve,["NOT_AFFECTED", "PATCHED"])
