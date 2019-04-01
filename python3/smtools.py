@@ -17,125 +17,135 @@
 #                        - Moved config to YAML
 #
 
+"""This library contains functions used in other modules"""
 
-import logging, os, sys, subprocess, xmlrpc.client, datetime, time, re, smtplib, base64, yaml, inspect
 from email.mime.text import MIMEText
+import xmlrpc.client
+import logging
+import os
+import sys
+import datetime
+import smtplib
+import yaml
 
-error_found=False
-error_text=""
-hostname=""
+
+ERROR_FOUND = False
+ERROR_TEXT = ""
+HOSTNAME = ""
+LOGGER = ""
 
 if not os.path.isfile(os.path.dirname(__file__)+"/configsm.yaml"):
-   print("ERROR: configsm.yaml doesn't exist. Please create file")
-   sys.exit(1)
+    print("ERROR: configsm.yaml doesn't exist. Please create file")
+    sys.exit(1)
 else:
-    configsm=yaml.load(open(os.path.dirname(__file__)+'/configsm.yaml'))
+    CONFIGSM = yaml.load(open(os.path.dirname(__file__)+'/configsm.yaml'))
 
 ####################################sm#########
 #
 # Functions
 #
 
-def set_logging(hn="",fb=False):
-    global logger
-    if fb:
-       if not os.path.exists(configsm['dirs']['log_dir']+"/"+sys.argv[0].split('/')[-1].split('.')[0]):
-          os.makedirs(configsm['dirs']['log_dir']+"/"+sys.argv[0].split('/')[-1].split('.')[0])
-       logname=configsm['dirs']['log_dir']+"/"+sys.argv[0].split('/')[-1].split('.')[0]+"/"+"server-"+hn+".log"
+def set_logging(host_name="", file_based=False):
+    """Set Logging"""
+    global LOGGER
+    log_dir = CONFIGSM['dirs']['log_dir']+"/"+sys.argv[0].split('/')[-1].split('.')[0]
+    if file_based:
+        if not os.path.exists(log_dir):
+            os.makedirs(log_dir)
+        log_name = log_dir+"/"+host_name+".log"
     else:
-       if not os.path.exists(configsm['dirs']['log_dir']):
-          os.makedirs(configsm['dirs']['log_dir'])
-       logname=configsm['dirs']['log_dir']+"/"+sys.argv[0].split('/')[-1].split('.')[0]+".log"
-    logging.basicConfig(filename=logname,
-       filemode='a',
-       format='%(asctime)s : %(name)s : %(levelname)s - %(message)s',
-       datefmt='%d-%m-%Y %H:%M:%S',
-       level=logging.DEBUG)
+        if not os.path.exists(CONFIGSM['dirs']['log_dir']):
+            os.makedirs(CONFIGSM['dirs']['log_dir'])
+        log_name = log_dir+".log"
+    logging.basicConfig(filename=log_name,
+                        filemode='a',
+                        format='%(asctime)s : %(name)s : %(levelname)s - %(message)s',
+                        datefmt='%d-%m-%Y %H:%M:%S',
+                        level=logging.DEBUG)
     console = logging.StreamHandler()
     console.setLevel(logging.DEBUG)
-    logging.getLogger('').addHandler(console)    
-    logger = logging.getLogger(hn)
-
-def read_yaml():
-    if not os.path.isfile(os.path.dirname(__file__)+"/configsm.yaml"):
-       print("ERROR: configsm.yaml doesn't exist. Please create file")
-       sys.exit(1)
-    else:
-       return yaml.load(open(os.path.dirname(__file__)+'configsm.yaml'))
+    logging.getLogger('').addHandler(console)
+    LOGGER = logging.getLogger(host_name)
 
 def suman_login():
-    clt = xmlrpc.client.Server("http://"+configsm['suman']['server']+"/rpc/api")
+    """Log in to SUSE Manager Server"""
+    clt = xmlrpc.client.Server("http://"+CONFIGSM['suman']['server']+"/rpc/api")
     try:
-       ses = clt.auth.login(configsm['suman']['user'], configsm['suman']['password'])
-    except xmlrpc.client.Fault as e:
-       logger.error("| %s | Unable to login to SUSE Manager server" % hostname)
-       sys.exit(1)
-    return clt,ses
+        ses = clt.auth.login(CONFIGSM['suman']['user'], CONFIGSM['suman']['password'])
+    except xmlrpc.client.Fault:
+        LOGGER.error("| %s | Unable to login to SUSE Manager server" % HOSTNAME)
+        sys.exit(1)
+    return clt, ses
 
-def suman_logout(clt,ses):
+def suman_logout(clt, ses):
+    """Logout from SUSE Manager Server"""
+    global ERROR_FOUND
+    global ERROR_TEXT
     try:
         clt.auth.logout(ses)
-    except xmlrpc.client.Fault as e:
-        logger.error("| %s | Unable to logout from SUSE Manager" % hostname)
-        error_found=True
-        error_text=error_text+"\n Problem closing connection to SUSE Manager"
+    except xmlrpc.client.Fault:
+        LOGGER.error("| %s | Unable to logout from SUSE Manager" % HOSTNAME)
+        ERROR_FOUND = True
+        ERROR_TEXT = ERROR_TEXT+"\n Problem closing connection to SUSE Manager"
 
 def minor_error(errtxt):
-    global error_found
-    global error_text
-    error_found=True
-    logger.warning("| %s" % (errtxt))
-    error_text=error_text+"\n"+errtxt
+    """Log minor error"""
+    global ERROR_FOUND
+    global ERROR_TEXT
+    ERROR_FOUND = True
+    LOGGER.warning("| %s" % (errtxt))
+    ERROR_TEXT = ERROR_TEXT+"\n"+errtxt
 
-def fatal_error(errtxt,rc=1):
-    global error_found
-    global error_text
-    error_found=True
-    error_text=error_text+"\n"+errtxt
-    logger.error("| %s" % (errtxt))
-    close_program(rc)
+def fatal_error(errtxt, return_code=1):
+    """Log fatal error and close program"""
+    global ERROR_FOUND
+    global ERROR_TEXT
+    ERROR_FOUND = True
+    ERROR_TEXT = ERROR_TEXT+"\n"+errtxt
+    LOGGER.error("| %s" % (errtxt))
+    close_program(return_code)
 
 def log_info(txt):
-    logger.info("| %s" % (txt))
-
-def log_warning(txt):
-    logger.warning("| %s" % (txt))
+    """Log info text"""
+    LOGGER.info("| %s" % (txt))
 
 def log_error(txt):
-    logger.error("| %s" % (txt))
+    """Log error text"""
+    LOGGER.error("| %s" % (txt))
 
 
 def send_mail():
-    global error_found
-    global error_text
-    script=os.path.basename(sys.argv[0])
+    """Send Mail"""
+    global ERROR_FOUND
+    global ERROR_TEXT
+    script = os.path.basename(sys.argv[0])
     try:
-       s = smtplib.SMTP(configsm['smtp']['server'])
-    except:
-       print ("error when sending mail")
-    #s.set_debuglevel(1)
-    txt=("Dear admin,\n\nThe job %s has run today at %s. Unfortunately there have been some errors.\n\nPlease see the following list:\n" % (script,datetime.datetime.now()))
-    error_text=txt+error_text
-    msg = MIMEText(error_text)
-    sender = configsm['smtp']['sender']
-    recipients = configsm['smtp']['receivers']
-    msg['Subject'] = ("[%s] on server %s from %s has errors" % (script,hostname,datetime.datetime.now()))
+        smtp_connection = smtplib.SMTP(CONFIGSM['smtp']['server'])
+    except xmlrpc.client.Fault:
+        print("error when sending mail")
+    #smtp_connection.set_debuglevel(1)
+    txt = ("Dear admin,\n\nThe job %s has run today at %s.\n\nUnfortunately there have been some errors.\n\nPlease see the following list:\n" % (script, datetime.datetime.now()))
+    ERROR_TEXT = txt+ERROR_TEXT
+    msg = MIMEText(ERROR_TEXT)
+    sender = CONFIGSM['smtp']['sender']
+    recipients = CONFIGSM['smtp']['receivers']
+    msg['Subject'] = ("[%s] on server %s from %s has errors" % (script, HOSTNAME, datetime.datetime.now()))
     msg['From'] = sender
     msg['To'] = ", ".join(recipients)
     try:
-       s.sendmail(sender, recipients, msg.as_string())
+        smtp_connection.sendmail(sender, recipients, msg.as_string())
     except:
-       loggeer.error("sending mail failed")
-       
-def set_hostname(hn):
-    global hostname
-    hostname=hn
+        logger.error("sending mail failed")
 
-def close_program(rc=0):
+def set_hostname(host_name):
+    """Set hostnam for global use"""
+    global HOSTNAME
+    HOSTNAME = host_name
+
+def close_program(return_code=0):
+    """Close program and send mail if there is an error"""
     logging.info("| Finished %s" % (datetime.datetime.now()))
-    if error_found:
-       if configsm['smtp']['sendmail']:
-          send_mail()
-    sys.exit(rc)
-
-   
+    if ERROR_FOUND:
+        if CONFIGSM['smtp']['sendmail']:
+            send_mail()
+    sys.exit(return_code)

@@ -1,0 +1,26 @@
+************* Module smtools
+C:127, 0: Line too long (178/100) (line-too-long)
+C:132, 0: Line too long (107/100) (line-too-long)
+W: 50, 4: Using the global statement (global-statement)
+W: 76, 8: Specify string format arguments as logging function parameters (logging-not-lazy)
+W: 82, 4: Using the global statement (global-statement)
+W: 83, 4: Using the global statement (global-statement)
+W: 87, 8: Specify string format arguments as logging function parameters (logging-not-lazy)
+W: 93, 4: Using the global statement (global-statement)
+W: 94, 4: Using the global statement (global-statement)
+W: 96, 4: Specify string format arguments as logging function parameters (logging-not-lazy)
+W:101, 4: Using the global statement (global-statement)
+W:102, 4: Using the global statement (global-statement)
+W:105, 4: Specify string format arguments as logging function parameters (logging-not-lazy)
+W:110, 4: Specify string format arguments as logging function parameters (logging-not-lazy)
+W:114, 4: Specify string format arguments as logging function parameters (logging-not-lazy)
+W:119, 4: Using the global statement (global-statement)
+W:120, 4: Using the global statement (global-statement)
+W:137, 4: No exception type(s) specified (bare-except)
+E:138, 8: Undefined variable 'logger' (undefined-variable)
+W:142, 4: Using the global statement (global-statement)
+W:147, 4: Specify string format arguments as logging function parameters (logging-not-lazy)
+
+------------------------------------------------------------------
+Your code has been rated at 7.34/10 (previous run: 7.34/10, +0.00)
+
