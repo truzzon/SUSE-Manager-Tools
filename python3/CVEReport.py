@@ -18,6 +18,9 @@
 #
 #
 #
+"""
+CVE report.
+"""
 
 import argparse
 from argparse import RawTextHelpFormatter
