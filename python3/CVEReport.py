@@ -185,15 +185,18 @@ def main():
     parser.add_argument('--version', action='version', version='%(prog)s 0.0.1, October 20, 2017')
     args = parser.parse_args()
 
-    cve_data = get_cve_data(args)
-    if not args.reverse:
-        create_file_cve(cve_data, args.filename)
-    else:
-        create_file_cve_reverse(cve_data, args.filename)
+    if args.filename:
+        cve_data = get_cve_data(args)
+        if not args.reverse:
+            create_file_cve(cve_data, args.filename)
+        else:
+            create_file_cve_reverse(cve_data, args.filename)
 
-    smt.log_info("Result can be found in file: {}". format(args.filename))
-    smt.suman_logout()
-    smt.close_program()
+        smt.log_info("Result can be found in file: {}". format(args.filename))
+        smt.suman_logout()
+        smt.close_program()
+    else:
+        parser.print_help()
 
 
 if __name__ == "__main__":
