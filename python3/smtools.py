@@ -18,7 +18,9 @@
 #
 # coding: utf-8
 
-"""This library contains functions used in other modules"""
+"""
+This library contains functions used in other modules
+"""
 
 from email.mime.text import MIMEText
 import xmlrpc.client
@@ -31,7 +33,7 @@ import yaml
 
 def load_yaml(stream):
     """
-    Load YAML data
+    Load YAML data.
     """
     loader = yaml.FullLoader(stream)
     try:
@@ -49,7 +51,9 @@ else:
 
 
 class SMTools:
-    """Class to define needed tools"""
+    """
+    Class to define needed tools.
+    """
     error_text = ""
     error_found = False
     hostname = ""
@@ -57,6 +61,9 @@ class SMTools:
     session = ""
 
     def __init__(self, hostname="", hostbased=False):
+        """
+        Constructor.
+        """
         self.hostname = hostname
         self.hostbased = hostbased
         log_dir = CONFIGSM['dirs']['log_dir'] + "/" + sys.argv[0].split('/')[-1].split('.')[0]
@@ -79,14 +86,18 @@ class SMTools:
         logging.getLogger(self.hostname)
 
     def minor_error(self, errtxt):
-        """Print minor error"""
+        """
+        Print minor error.
+        """
         self.error_text += errtxt
         self.error_text += "\n"
         self.error_found = True
         logging.warning(f"| {errtxt}")
 
     def fatal_error(self, errtxt, return_code=1):
-        """log fatal error and exit program"""
+        """
+        Log fatal error and exit program.
+        """
         self.error_text += errtxt
         self.error_text += "\n"
         self.error_found = True
@@ -95,16 +106,22 @@ class SMTools:
 
     @staticmethod
     def log_info(errtxt):
-        """Log info text"""
+        """
+        Log info text.
+        """
         logging.info(f"| {errtxt}")
 
     @staticmethod
     def log_error(errtxt):
-        """Log error text"""
+        """
+        Log error text.
+        """
         logging.error(f"| {errtxt}")
 
     def send_mail(self):
-        """Send Mail"""
+        """
+        Send Mail.
+        """
         script = os.path.basename(sys.argv[0])
         # noinspection PyBroadException
         try:
@@ -129,7 +146,9 @@ class SMTools:
             logging.error("sending mail failed")
 
     def set_hostname(self, host_name):
-        """Set hostnam for global use"""
+        """
+        Set hostnam for global use.
+        """
         self.hostname = host_name
 
     def close_program(self, return_code=0):
@@ -140,7 +159,9 @@ class SMTools:
         sys.exit(return_code)
 
     def suman_login(self):
-        """Log in to SUSE Manager Server"""
+        """
+        Log in to SUSE Manager Server.
+        """
         self.client = xmlrpc.client.Server("http://" + CONFIGSM['suman']['server'] + "/rpc/api")
         try:
             self.session = self.client.auth.login(CONFIGSM['suman']['user'], CONFIGSM['suman']['password'])
@@ -148,7 +169,9 @@ class SMTools:
             self.fatal_error("| %s | Unable to login to SUSE Manager server" % CONFIGSM['suman']['server'])
 
     def suman_logout(self):
-        """Logout from SUSE Manager Server"""
+        """
+        Logout from SUSE Manager Server.
+        """
         try:
             self.client.auth.logout(self.session)
         except xmlrpc.client.Fault:
