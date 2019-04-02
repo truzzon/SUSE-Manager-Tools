@@ -77,31 +77,29 @@ class SMTools:
             log_name = os.path.join(log_dir, "smtools.log")
         logging.basicConfig(filename=log_name,
                             filemode='a',
-                            format='%(asctime)s : %(levelname)s  %(message)s',
+                            format='%(asctime)s : %(levelname)s | %(message)s',
                             datefmt='%d-%m-%Y %H:%M:%S',
                             level=logging.DEBUG)
         console = logging.StreamHandler()
         console.setLevel(logging.DEBUG)
-        logging.getLogger('').addHandler(console)
-        logging.getLogger(self.hostname)
+        if self.hostbased:
+            self.log = logging.getLogger(self.hostname)
+        else:
+            self.log = logging.getLogger('').addHandler(console)
 
     def minor_error(self, errtxt):
         """
         Print minor error.
         """
-        self.error_text += errtxt
-        self.error_text += "\n"
         self.error_found = True
-        logging.warning(f"| {errtxt}")
+        self.log.warning(self.error_text)
 
     def fatal_error(self, errtxt, return_code=1):
         """
         Log fatal error and exit program.
         """
-        self.error_text += errtxt
-        self.error_text += "\n"
         self.error_found = True
-        logging.error(f"| {errtxt}")
+        self.log.error(self.error_text)
         self.close_program(return_code)
 
     @staticmethod
@@ -109,14 +107,14 @@ class SMTools:
         """
         Log info text.
         """
-        logging.info(f"| {errtxt}")
+        self.log.info(errtxt)
 
     @staticmethod
     def log_error(errtxt):
         """
         Log error text.
         """
-        logging.error(f"| {errtxt}")
+        self.log.error(errtxt)
 
     def send_mail(self):
         """
@@ -143,7 +141,7 @@ class SMTools:
             # noinspection PyUnboundLocalVariable
             smtp_connection.sendmail(sender, recipients, msg.as_string())
         except Exception:
-            logging.error("sending mail failed")
+            self.log.error("sending mail failed")
 
     def set_hostname(self, host_name):
         """
@@ -153,7 +151,7 @@ class SMTools:
 
     def close_program(self, return_code=0):
         """Close program and send mail if there is an error"""
-        logging.info(f"| Finished {datetime.datetime.now()}")
+        self.log.info(f"| Finished {datetime.datetime.now()}")
         if self.error_found and CONFIGSM['smtp']['sendmail']:
             self.send_mail()
         sys.exit(return_code)
