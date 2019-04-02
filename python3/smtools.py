@@ -28,11 +28,23 @@ import datetime
 import smtplib
 import yaml
 
+def load_yaml(stream):
+    """
+    Load YAML data
+    """
+    loader = yaml.FullLoader(stream)
+    try:
+        return loader.get_single_data()
+    finally:
+        loader.dispose()
+
+
 if not os.path.isfile(os.path.dirname(__file__) + "/configsm.yaml"):
     print("ERROR: configsm.yaml doesn't exist. Please create file")
     sys.exit(1)
 else:
-    CONFIGSM = yaml.load(open(os.path.dirname(__file__) + '/configsm.yaml'))
+    with open(os.path.dirname(__file__) + '/configsm.yaml') as h_cfg:
+        CONFIGSM = load_yaml(h_cfg)
 
 
 class SMTools:
