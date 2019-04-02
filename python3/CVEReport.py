@@ -22,6 +22,7 @@
 CVE report.
 """
 
+import os
 import argparse
 from argparse import RawTextHelpFormatter
 import datetime
@@ -55,6 +56,13 @@ def create_file_cve_reverse(cve_data, fn):
     """
     _create_cve(data=cve_data, path=fn, header="System Name;CVE")
 
+
+def logfile_present(path):
+    """
+    Check type for the existing file
+    """
+    if not os.path.isfile(path):
+        raise argparse.ArgumentTypeError("Not a valid file: '{0}'.".format(path))
 
 
 ######################################################################
