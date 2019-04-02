@@ -24,10 +24,11 @@ import xmlrpc.client
 import time
 import smtools
 
+smt = smtools.SMTools()
+
+
 def main():
     """Main Function"""
-    smtools.set_logging()
-    # Check if parameters have been given
     parser = argparse.ArgumentParser(formatter_class=RawTextHelpFormatter, description=('''\
          Usage:
          sync_channel.py
@@ -37,31 +38,34 @@ def main():
     parser.add_argument('--version', action='version', version='%(prog)s 1.0.1, February 10, 2019')
     args = parser.parse_args()
     if not args.channel:
-        smtools.fatal_error("No parent channel to be cloned given. Aborting operation")
+        smt.fatal_error("No parent channel to be cloned given. Aborting operation")
     else:
         channel = args.channel
-    (client, session) = smtools.suman_login()
-    smtools.log_info("Updating the following channel with latest patches and packages")
-    smtools.log_info("===============================================================")
-    smtools.log_info("Updating: %s" % channel)
+    smt.suman_login()
+    smt.log_info("Updating the following channel with latest patches and packages")
+    smt.log_info("===============================================================")
+    # noinspection PyUnboundLocalVariable
+    smt.log_info(f"Updating: {channel}")
     try:
-        clone_label = client.channel.software.getDetails(session, channel).get('clone_original')
+        clone_label = smt.client.channel.software.getDetails(smt.session, channel).get('clone_original')
     except xmlrpc.client.Fault:
-        smtools.fatal_error('Unable to get channel information for %s. Does the channels \
-                            exist or is it a cloned channel?' % channel)
-    smtools.log_info('     Errata .....')
+        message = f'Unable to get channel information for {channel}. Does the channels exist or is it a cloned channel?'
+        smt.fatal_error(message)
+    smt.log_info('     Errata .....')
     try:
-        client.channel.software.mergeErrata(session, clone_label, channel)
+        # noinspection PyUnboundLocalVariable
+        smt.client.channel.software.mergeErrata(smt.session, clone_label, channel)
     except xmlrpc.client.Fault:
-        smtools.fatal_error('Unable to get errata for channel %s' % channel)
+        smt.fatal_error(f'Unable to get errata for channel {channel}')
     time.sleep(20)
-    smtools.log_info('     Packages .....')
+    smt.log_info('     Packages .....')
     try:
-        client.channel.software.mergePackages(session, clone_label, channel)
+        smt.client.channel.software.mergePackages(smt.session, clone_label, channel)
     except xmlrpc.client.Fault:
-        smtools.fatal_error('Unable to get packages for channel %s' % channel)
-    smtools.log_info("FINISHED")
-    smtools.close_program()
+        smt.fatal_error(f'Unable to get packages for channel {channel}')
+    smt.log_info("FINISHED")
+    smt.close_program()
+
 
 if __name__ == "__main__":
     SystemExit(main())
