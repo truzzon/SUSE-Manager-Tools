@@ -30,53 +30,31 @@ import smtools
 smt = smtools.SMTools()
 
 
+def _create_cve(data, path, header):
+    """
+    Create CVE data.
+    """
+    with open(path, "w") as fhcve:
+        if not data:
+            fhcve.write("NO CVE\n")  # TODO: Should it be a broken data inside after all?
+        else:
+            fhcve.write("{}\n".format(header))
+            for row in data:
+                fhcve.write("{}\n".format(";".join(row)))
+
 def create_file_cve(cve_data, fn):
-    file = open(fn, "w")
-    if not cve_data:
-        file.write("NO CVE\n")
-    else:
-        file.write("System Name;CVE;Patch-Name;Patch available,channel containing patch;Packages included\n")
-        for x in cve_data:
-            file.write(x[0])
-            file.write(";")
-            file.write(x[1])
-            file.write(";")
-            file.write(x[2])
-            file.write(";")
-            file.write(x[3])
-            file.write(";")
-            file.write(x[4])
-            file.write(";")
-            file.write(x[5])
-            file.write("\n")
-    file.close()
-    return
+    """
+    Create CVE data.
+    """
+    _create_cve(data=cve_data, path=fn, header="System Name;CVE;Patch-Name;Patch available,channel containing patch;Packages included")
 
 
 def create_file_cve_reverse(cve_data, fn):
-    file = open(fn, "w")
-    if not cve_data:
-        file.write("NO CVE\n")
-    else:
-        file.write("System Name;CVE\n")
-        for x in cve_data:
-            file.write(x[0])
-            file.write(";")
-            file.write(x[1])
-            file.write("\n")
-    file.close()
-    return
+    """
+    Create (reverse?) CVE data.
+    """
+    _create_cve(data=cve_data, path=fn, header="System Name;CVE")
 
-
-def logfile_present(s):
-    # noinspection PyPep8
-    try:
-        file = open(s, 'w')
-    except:
-        msg = "Not a valid file: '{0}'.".format(s)
-        raise argparse.ArgumentTypeError(msg)
-    file.close()
-    return s
 
 
 ######################################################################
