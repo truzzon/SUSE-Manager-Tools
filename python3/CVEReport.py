@@ -80,6 +80,7 @@ def get_cve_content(args):
     """
     Get CVE content.
     """
+    smt = get_smt()
     smt.log_info("")
     smt.log_info(f"Start {datetime.datetime.now()}")
     smt.log_info("")
@@ -96,6 +97,7 @@ def get_cve_data(args):
     """
     Get CVE data.
     """
+    smt = get_smt()
     cve_data_collected = []
     for cve in get_cve_content(args):
         if not args.reverse:
@@ -193,6 +195,7 @@ def main():
         else:
             create_file_cve_reverse(cve_data, args.filename)
 
+        smt = get_smt()
         smt.log_info("Result can be found in file: {}". format(args.filename))
         smt.suman_logout()
         smt.close_program()
