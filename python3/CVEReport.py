@@ -28,7 +28,15 @@ from argparse import RawTextHelpFormatter
 import datetime
 import smtools
 
-smt = smtools.SMTools()
+__smt = None
+
+def get_smt():
+    """
+    Get SMT instance
+    """
+    global __smt
+    __smt = smtools.SMTools()
+    return __smt
 
 
 def _create_cve(data, path, header):
