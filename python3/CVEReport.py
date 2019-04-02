@@ -171,6 +171,7 @@ def get_cve_data(args):
             smt.log_info("Completed.")
     return cve_data_collected
 
+
 def main():
     """
     Main function.
