@@ -66,15 +66,15 @@ class SMTools:
         """
         self.hostname = hostname
         self.hostbased = hostbased
-        log_dir = CONFIGSM['dirs']['log_dir'] + "/" + sys.argv[0].split('/')[-1].split('.')[0]
+        log_dir = os.path.join(CONFIGSM['dirs']['log_dir'], __file__.split(".")[0])
         if self.hostbased:
             if not os.path.exists(log_dir):
                 os.makedirs(log_dir)
-            log_name = log_dir + "/" + self.hostname + ".log"
+            log_name = os.path.join(log_dir, self.hostname + ".log")
         else:
             if not os.path.exists(CONFIGSM['dirs']['log_dir']):
                 os.makedirs(CONFIGSM['dirs']['log_dir'])
-            log_name = log_dir + ".log"
+            log_name = os.path.join(log_dir, "smtools.log")
         logging.basicConfig(filename=log_name,
                             filemode='a',
                             format='%(asctime)s : %(levelname)s  %(message)s',
