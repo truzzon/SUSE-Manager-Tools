@@ -16,6 +16,7 @@
 # 2018-11-15 M.Brookhuis - Moved to python3.
 #                        - Moved config to YAML
 #
+# coding: utf-8
 
 """This library contains functions used in other modules"""
 
