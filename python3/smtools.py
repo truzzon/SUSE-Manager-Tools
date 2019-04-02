@@ -85,32 +85,31 @@ class SMTools:
         if self.hostbased:
             self.log = logging.getLogger(self.hostname)
         else:
-            self.log = logging.getLogger('').addHandler(console)
+            self.log = logging.getLogger('')
+            self.log.addHandler(console)
 
     def minor_error(self, errtxt):
         """
         Print minor error.
         """
         self.error_found = True
-        self.log.warning(self.error_text)
+        self.log.warning(errtxt)
 
     def fatal_error(self, errtxt, return_code=1):
         """
         Log fatal error and exit program.
         """
         self.error_found = True
-        self.log.error(self.error_text)
+        self.log.error(errtxt)
         self.close_program(return_code)
 
-    @staticmethod
-    def log_info(errtxt):
+    def log_info(self, errtxt):
         """
         Log info text.
         """
         self.log.info(errtxt)
 
-    @staticmethod
-    def log_error(errtxt):
+    def log_error(self, errtxt):
         """
         Log error text.
         """
