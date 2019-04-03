@@ -28,7 +28,15 @@ from argparse import RawTextHelpFormatter
 import datetime
 import smtools
 
-smt = smtools.SMTools()
+__smt = None
+
+def get_smt():
+    """
+    Get SMT instance
+    """
+    global __smt
+    __smt = smtools.SMTools()
+    return __smt
 
 
 def _create_cve(data, path, header):
@@ -73,6 +81,7 @@ def get_cve_content(args):
     """
     Get CVE content.
     """
+    smt = get_smt()
     smt.log_info("")
     smt.log_info(f"Start {datetime.datetime.now()}")
     smt.log_info("")
@@ -89,6 +98,7 @@ def get_cve_data(args):
     """
     Get CVE data.
     """
+    smt = get_smt()
     cve_data_collected = []
     for cve in get_cve_content(args):
         if not args.reverse:
@@ -164,6 +174,7 @@ def get_cve_data(args):
             smt.log_info("Completed.")
     return cve_data_collected
 
+
 def main():
     """
     Main function.
@@ -178,15 +189,19 @@ def main():
     parser.add_argument('--version', action='version', version='%(prog)s 0.0.1, October 20, 2017')
     args = parser.parse_args()
 
-    cve_data = get_cve_data(args)
-    if not args.reverse:
-        create_file_cve(cve_data, args.filename)
-    else:
-        create_file_cve_reverse(cve_data, args.filename)
+    if args.filename:
+        cve_data = get_cve_data(args)
+        if not args.reverse:
+            create_file_cve(cve_data, args.filename)
+        else:
+            create_file_cve_reverse(cve_data, args.filename)
 
-    smt.log_info("Result can be found in file: {}". format(args.filename))
-    smt.suman_logout()
-    smt.close_program()
+        smt = get_smt()
+        smt.log_info("Result can be found in file: {}". format(args.filename))
+        smt.suman_logout()
+        smt.close_program()
+    else:
+        parser.print_help()
 
 
 if __name__ == "__main__":
