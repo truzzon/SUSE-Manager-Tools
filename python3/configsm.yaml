@@ -7,8 +7,8 @@ smtp:
    # sendmail: True is a mail should be send for minor and major errors. False if no mail should be send     
    sendmail: True
    receivers:
-     - <reciever 1>
-     - <reciever 2>
+     - <receiver 1>
+     - <receiver 2>
    sender: <name of sender>
    server: <smtp server>
 

@@ -63,6 +63,7 @@ def logfile_present(path):
     """
     if not os.path.isfile(path):
         raise argparse.ArgumentTypeError("Not a valid file: '{0}'.".format(path))
+    return path
 
 
 ######################################################################
