@@ -31,11 +31,12 @@ import datetime
 import smtplib
 import yaml
 
+
 def load_yaml(stream):
     """
     Load YAML data.
     """
-    loader = yaml.FullLoader(stream)
+    loader = yaml.Loader(stream)
     try:
         return loader.get_single_data()
     finally:
@@ -66,7 +67,7 @@ class SMTools:
         """
         self.hostname = hostname
         self.hostbased = hostbased
-        log_dir = os.path.join(CONFIGSM['dirs']['log_dir'], __file__.split(".")[0])
+        log_dir = CONFIGSM['dirs']['log_dir']
         if self.hostbased:
             if not os.path.exists(log_dir):
                 os.makedirs(log_dir)
@@ -92,28 +93,41 @@ class SMTools:
         """
         Print minor error.
         """
+        self.error_text += errtxt
+        self.error_text += "\n"
         self.error_found = True
-        self.log.warning(errtxt)
+        logging.warning("| %s" % errtxt)
 
     def fatal_error(self, errtxt, return_code=1):
         """
-        Log fatal error and exit program.
+        log fatal error and exit program
         """
+        self.error_text += errtxt
+        self.error_text += "\n"
         self.error_found = True
-        self.log.error(errtxt)
+        logging.error("| %s" % errtxt)
         self.close_program(return_code)
 
-    def log_info(self, errtxt):
+    @staticmethod
+    def log_info(errtxt):
         """
-        Log info text.
+        Log info text
         """
-        self.log.info(errtxt)
+        logging.info("| %s" % errtxt)
 
-    def log_error(self, errtxt):
+    @staticmethod
+    def log_error(errtxt):
         """
-        Log error text.
+        Log error text
         """
-        self.log.error(errtxt)
+        logging.error("| %s" % errtxt)
+
+    @staticmethod
+    def log_warning(errtxt):
+        """
+        Log error text
+        """
+        logging.warning("| %s" % errtxt)
 
     def send_mail(self):
         """
@@ -126,13 +140,13 @@ class SMTools:
         except Exception:
             self.fatal_error("error when sending mail")
         datenow = datetime.datetime.now()
-        txt = f"Dear admin,\n\nThe job {script} has run today at {datenow}."
+        txt = ("Dear admin,\n\nThe job %s has run today at %s." % (script, datenow))
         txt += "\n\nUnfortunately there have been some error\n\nPlease see the following list:\n"
         txt += self.error_text
         msg = MIMEText(txt)
         sender = CONFIGSM['smtp']['sender']
         recipients = CONFIGSM['smtp']['receivers']
-        msg['Subject'] = f"[{script}] on server {self.hostname} )from {datenow} has errors"
+        msg['Subject'] = ("[%s] on server %s from %s has errors" % (script, self.hostname, datenow))
         msg['From'] = sender
         msg['To'] = ", ".join(recipients)
         # noinspection PyBroadException

@@ -16,23 +16,35 @@
 #                        - Added logging
 # 2019-02-10 M.Brookhuis - General update
 
-"""This program will sync the give channel"""
+"""
+This program will sync the give channel
+"""
 
 import argparse
-from argparse import RawTextHelpFormatter
-import xmlrpc.client
-import time
 import datetime
+import time
+import xmlrpc.client
 import smtools
+from argparse import RawTextHelpFormatter
 
-smt = smtools.SMTools()
+__smt = None
 
 
-def create_backup(par, dat):
-    """Create backup from stage"""
+def create_backup(par):
+    """
+    Create backup from stage
+    """
+    dat = ("%s%02d%02d" % (datetime.datetime.now().year, datetime.datetime.now().month, \
+                           datetime.datetime.now().day))
+    clo = "bu-" + dat + "-" + par
+    try:
+        smt.client.channel.software.getDetails(smt.session, clo)
+    except xmlrpc.client.Fault:
+        smt.log_info("Creating backup of current channel. Channel will be called with: %s" % clo)
+    else:
+        smt.fatal_error('The backupchannel %s already exists. Aborting operation.' % clo)
     clo = "bu-" + dat + "-" + par
     clo_str = {'name': clo, 'label': clo, 'summary': clo}
-    smt.log_info(f"Creating backup of current channel. Channel will be called with: {clo}")
     try:
         smt.client.channel.software.clone(smt.session, par, clo_str, False)
     except xmlrpc.client.Fault:
@@ -40,7 +52,7 @@ def create_backup(par, dat):
     try:
         child_channels = smt.client.channel.software.listChildren(smt.session, par)
     except xmlrpc.client.Fault:
-        smt.fatal_error(f'Unable to get list child channels for parent channel {par}.')
+        smt.fatal_error('Unable to get list child channels for parent channel %s.' % par)
     for channels in child_channels:
         clo_str = {}
         new_clo = "bu-" + dat + "-" + channels.get('label')
@@ -49,34 +61,40 @@ def create_backup(par, dat):
         try:
             smt.client.channel.software.clone(smt.session, channels.get('label'), clo_str, False)
         except xmlrpc.client.Fault:
-            smt.fatal_error(f'Unable to clone child channel {new_clo}. Please check logs')
+            smt.fatal_error('Unable to clone child channel %s. Please check logs' % new_clo)
     smt.log_info("Creating backup finished")
 
 
 def clone_channel(channel):
-    """Clone channel"""
+    """
+    Clone channel
+    """
     chan = channel.get('label')
-    smt.log_info(f'Updating {chan}')
+    smt.log_info('Updating %s' % chan)
     try:
         clone_label = smt.client.channel.software.getDetails(smt.session, chan).get('clone_original')
     except xmlrpc.client.Fault:
-        smt.minor_error(f'Unable to get parent data for channel {chan}. Has this channel been cloned. Skipping')
+        smt.minor_error('Unable to get parent data for channel %s. Has this channel been cloned. Skipping' % chan)
         return
     smt.log_info('     Errata .....')
     try:
         smt.client.channel.software.mergeErrata(smt.session, clone_label, chan)
     except xmlrpc.client.Fault:
-        smt.minor_error(f'Unable to get errata for channel {chan}.')
+        smt.minor_error('Unable to get errata for channel %s.' % chan)
     time.sleep(10)
     smt.log_info('     Packages .....')
     try:
         smt.client.channel.software.mergePackages(smt.session, clone_label, chan)
     except xmlrpc.client.Fault:
-        smt.minor_error(f'Unable to get packages for channel {chan}.')
+        smt.minor_error('Unable to get packages for channel %s.' % chan)
 
 
 def main():
-    """Main section"""
+    """
+    Main section
+    """
+    global smt
+    smt = smtools.SMTools()
     parser = argparse.ArgumentParser(formatter_class=RawTextHelpFormatter, description=('''\
          Usage:
          sync_channel.py
@@ -95,11 +113,11 @@ def main():
     try:
         parent_details = smt.client.channel.software.getDetails(smt.session, parent)
     except xmlrpc.client.Fault:
-        message = f'Unable to get details of parent channel {parent}.'
+        message = ('Unable to get details of parent channel %s.' % parent)
         message += ' Does the channel exist or is it a cloned channel?'
         smt.fatal_error(message)
     if parent_details.get('parent_channel_label'):
-        smt.fatal_error(f"Given parent channel {parent}, is not a parent channel.")
+        smt.fatal_error("Given parent channel %s, is not a parent channel." % parent)
     try:
         child_channels = smt.client.channel.software.listChildren(smt.session, parent)
     except xmlrpc.client.Fault:
@@ -107,19 +125,11 @@ def main():
     smt.log_info("Updating the following channels with latest patches and packages")
     smt.log_info("================================================================")
     if args.backup:
-        date = ("%s%02d%02d" % (datetime.datetime.now().year, datetime.datetime.now().month, \
-                                datetime.datetime.now().day))
-        buc = "bu-" + date + "-" + parent
-        try:
-            smt.client.channel.software.getDetails(smt.session, buc)
-        except xmlrpc.client.Fault:
-            create_backup(parent, date)
-        else:
-            smt.fatal_error(f'The backupchannel {buc} already exists. Aborting operation.')
+        create_backup(parent)
     for channel in child_channels:
-        if not "pool" in channel.get('label') or not "iso" in channel.get('label'):
+        if "pool" not in channel.get('label'):
             clone_channel(channel)
-            time.sleep(20)
+            time.sleep(10)
     smt.close_program()
 
 

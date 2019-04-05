@@ -30,14 +30,6 @@ import smtools
 
 __smt = None
 
-def get_smt():
-    """
-    Get SMT instance
-    """
-    global __smt
-    __smt = smtools.SMTools()
-    return __smt
-
 
 def _create_cve(data, path, header):
     """
@@ -51,11 +43,13 @@ def _create_cve(data, path, header):
             for row in data:
                 fhcve.write("{}\n".format(";".join(row)))
 
+
 def create_file_cve(cve_data, fn):
     """
     Create CVE data.
     """
-    _create_cve(data=cve_data, path=fn, header="System Name;CVE;Patch-Name;Patch available,channel containing patch;Packages included")
+    _create_cve(data=cve_data, path=fn,
+                header="System Name;CVE;Patch-Name;Patch available,channel containing patch;Packages included")
 
 
 def create_file_cve_reverse(cve_data, fn):
@@ -74,14 +68,10 @@ def logfile_present(path):
     return path
 
 
-######################################################################
-# main
-######################################################################
 def get_cve_content(args):
     """
     Get CVE content.
     """
-    smt = get_smt()
     smt.log_info("")
     smt.log_info(f"Start {datetime.datetime.now()}")
     smt.log_info("")
@@ -94,15 +84,15 @@ def get_cve_content(args):
     return cve_data
 
 
+# noinspection PyPep8
 def get_cve_data(args):
     """
     Get CVE data.
     """
-    smt = get_smt()
     cve_data_collected = []
     for cve in get_cve_content(args):
         if not args.reverse:
-            # noinspection PyPep8
+            # noinspection PyPep8,PyBroadException
             try:
                 cve_list = smt.client.audit.listSystemsByPatchStatus(smt.session, cve, ["AFFECTED_PATCH_INAPPLICABLE",
                                                                                         "AFFECTED_PATCH_APPLICABLE"])
@@ -115,6 +105,7 @@ def get_cve_data(args):
                 smt.log_info(f"Processing CVE {cve}.")
             for cve_system in cve_list:
                 cve_data = []
+                # noinspection PyBroadException
                 try:
                     cve_data.append(smt.client.system.getName(smt.session, cve_system.get("system_id")).get("name"))
                 except:
@@ -128,7 +119,7 @@ def get_cve_data(args):
                         adv_list = adv_list + ", " + adv
                     else:
                         adv_list = adv
-                    # noinspection PyPep8
+                    # noinspection PyPep8,PyBroadException
                     try:
                         cve_packages = smt.client.errata.listPackages(smt.session, adv)
                     except:
@@ -153,6 +144,7 @@ def get_cve_data(args):
                 cve_data_collected.append(cve_data)
             smt.log_info("Completed.")
         else:
+            # noinspection PyPep8,PyBroadException
             try:
                 cve_list = smt.client.audit.listSystemsByPatchStatus(smt.session, cve, ["NOT_AFFECTED", "PATCHED"])
             except:
@@ -164,6 +156,7 @@ def get_cve_data(args):
                 smt.log_info("Processing CVE %s." % cve)
             for cve_system in cve_list:
                 cve_data = []
+                # noinspection PyPep8,PyBroadException
                 try:
                     cve_data.append(smt.client.system.getName(smt.session, cve_system.get("system_id")).get("name"))
                 except:
@@ -179,7 +172,9 @@ def main():
     """
     Main function.
     """
-    parser = argparse.ArgumentParser(formatter_class=RawTextHelpFormatter, description=("CVE report tool"))
+    global smt
+    smt = smtools.SMTools()
+    parser = argparse.ArgumentParser(formatter_class=RawTextHelpFormatter, description="CVE report tool")
     parser.add_argument("-c", "--cve", help="list of CVEs to be checked, comma delimeted, no spaces", required=True)
     parser.add_argument("-r", "--reverse", action="store_true", default=0,
                         help="list systems that have the CVE installed")
@@ -188,16 +183,13 @@ def main():
                         required=True, type=logfile_present)
     parser.add_argument('--version', action='version', version='%(prog)s 0.0.1, October 20, 2017')
     args = parser.parse_args()
-
     if args.filename:
         cve_data = get_cve_data(args)
         if not args.reverse:
             create_file_cve(cve_data, args.filename)
         else:
             create_file_cve_reverse(cve_data, args.filename)
-
-        smt = get_smt()
-        smt.log_info("Result can be found in file: {}". format(args.filename))
+        smt.log_info("Result can be found in file: {}".format(args.filename))
         smt.suman_logout()
         smt.close_program()
     else:
