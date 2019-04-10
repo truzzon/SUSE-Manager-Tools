@@ -73,9 +73,9 @@ def get_cve_content(args):
     Get CVE content.
     """
     smt.log_info("")
-    smt.log_info(f"Start {datetime.datetime.now()}")
+    smt.log_info("Start {}".format(datetime.datetime.now()))
     smt.log_info("")
-    smt.log_info(f"Given list of CVEs: {args.cve}")
+    smt.log_info("Given list of CVEs: {}".format(args.cve))
     smt.log_info("")
     smt.suman_login()
     cve_data = []
@@ -99,17 +99,17 @@ def get_cve_data(args):
             except:
                 cve_list = []
             if not cve_list:
-                smt.log_warning(f"Given CVE {cve} does not exist.")
+                smt.log_warning("Given CVE {} does not exist.".format(cve))
                 break
             else:
-                smt.log_info(f"Processing CVE {cve}.")
+                smt.log_info("Processing CVE {}.".format(cve))
             for cve_system in cve_list:
                 cve_data = []
                 # noinspection PyBroadException
                 try:
                     cve_data.append(smt.client.system.getName(smt.session, cve_system.get("system_id")).get("name"))
                 except:
-                    smt.log_error(f'unable to get hostname for system with ID {cve_system.get("system_id")}')
+                    smt.log_error('unable to get hostname for system with ID {}.'.format(cve_system.get("system_id")))
                     break
                 cve_data.append(cve)
                 adv_list = ""
@@ -119,6 +119,7 @@ def get_cve_data(args):
                         adv_list = adv_list + ", " + adv
                     else:
                         adv_list = adv
+                    cve_packages = None
                     # noinspection PyPep8,PyBroadException
                     try:
                         cve_packages = smt.client.errata.listPackages(smt.session, adv)
@@ -150,17 +151,17 @@ def get_cve_data(args):
             except:
                 cve_list = []
             if not cve_list:
-                smt.log_warning("Given CVE %s does not exist." % cve)
+                smt.log_warning("Given CVE {} does not exist.".format(cve))
                 break
             else:
-                smt.log_info("Processing CVE %s." % cve)
+                smt.log_info("Processing CVE {}.".format(cve))
             for cve_system in cve_list:
                 cve_data = []
                 # noinspection PyPep8,PyBroadException
                 try:
                     cve_data.append(smt.client.system.getName(smt.session, cve_system.get("system_id")).get("name"))
                 except:
-                    smt.log_error("unable to get hostname for system with ID %s" % cve_system.get("system_id"))
+                    smt.log_error("unable to get hostname for system with ID %{}".format(cve_system.get("system_id")))
                     break
                 cve_data.append(cve)
                 cve_data_collected.append(cve_data)

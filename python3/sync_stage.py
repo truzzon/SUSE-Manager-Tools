@@ -40,9 +40,9 @@ def create_backup(par):
     try:
         smt.client.channel.software.getDetails(smt.session, clo)
     except xmlrpc.client.Fault:
-        smt.log_info("Creating backup of current channel. Channel will be called with: %s" % clo)
+        smt.log_info("Creating backup of current channel. Channel will be called with: {}".format(clo))
     else:
-        smt.fatal_error('The backupchannel %s already exists. Aborting operation.' % clo)
+        smt.fatal_error('The backupchannel {} already exists. Aborting operation.'.format(clo))
     clo = "bu-" + dat + "-" + par
     clo_str = {'name': clo, 'label': clo, 'summary': clo}
     try:
@@ -52,7 +52,7 @@ def create_backup(par):
     try:
         child_channels = smt.client.channel.software.listChildren(smt.session, par)
     except xmlrpc.client.Fault:
-        smt.fatal_error('Unable to get list child channels for parent channel %s.' % par)
+        smt.fatal_error('Unable to get list child channels for parent channel {}.'.format(par))
     for channels in child_channels:
         clo_str = {}
         new_clo = "bu-" + dat + "-" + channels.get('label')
@@ -61,7 +61,7 @@ def create_backup(par):
         try:
             smt.client.channel.software.clone(smt.session, channels.get('label'), clo_str, False)
         except xmlrpc.client.Fault:
-            smt.fatal_error('Unable to clone child channel %s. Please check logs' % new_clo)
+            smt.fatal_error('Unable to clone child channel {}. Please check logs'.format(new_clo))
     smt.log_info("Creating backup finished")
 
 
@@ -74,19 +74,19 @@ def clone_channel(channel):
     try:
         clone_label = smt.client.channel.software.getDetails(smt.session, chan).get('clone_original')
     except xmlrpc.client.Fault:
-        smt.minor_error('Unable to get parent data for channel %s. Has this channel been cloned. Skipping' % chan)
+        smt.minor_error('Unable to get parent data for channel {}. Has this channel been cloned. Skipping'.format(chan))
         return
     smt.log_info('     Errata .....')
     try:
         smt.client.channel.software.mergeErrata(smt.session, clone_label, chan)
     except xmlrpc.client.Fault:
-        smt.minor_error('Unable to get errata for channel %s.' % chan)
+        smt.minor_error('Unable to get errata for channel {}.'.format(chan))
     time.sleep(10)
     smt.log_info('     Packages .....')
     try:
         smt.client.channel.software.mergePackages(smt.session, clone_label, chan)
     except xmlrpc.client.Fault:
-        smt.minor_error('Unable to get packages for channel %s.' % chan)
+        smt.minor_error('Unable to get packages for channel {}.'.format(chan))
 
 
 def main():
@@ -113,11 +113,11 @@ def main():
     try:
         parent_details = smt.client.channel.software.getDetails(smt.session, parent)
     except xmlrpc.client.Fault:
-        message = ('Unable to get details of parent channel %s.' % parent)
+        message = ('Unable to get details of parent channel {}.'.format(parent))
         message += ' Does the channel exist or is it a cloned channel?'
         smt.fatal_error(message)
     if parent_details.get('parent_channel_label'):
-        smt.fatal_error("Given parent channel %s, is not a parent channel." % parent)
+        smt.fatal_error("Given parent channel {}, is not a parent channel.".format(parent))
     try:
         child_channels = smt.client.channel.software.listChildren(smt.session, parent)
     except xmlrpc.client.Fault:

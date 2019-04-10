@@ -96,7 +96,7 @@ class SMTools:
         self.error_text += errtxt
         self.error_text += "\n"
         self.error_found = True
-        logging.warning("| %s" % errtxt)
+        logging.warning("| {}".format(errtxt))
 
     def fatal_error(self, errtxt, return_code=1):
         """
@@ -105,7 +105,7 @@ class SMTools:
         self.error_text += errtxt
         self.error_text += "\n"
         self.error_found = True
-        logging.error("| %s" % errtxt)
+        logging.error("| {}".format(errtxt))
         self.close_program(return_code)
 
     @staticmethod
@@ -113,21 +113,21 @@ class SMTools:
         """
         Log info text
         """
-        logging.info("| %s" % errtxt)
+        logging.info("| {}".format(errtxt))
 
     @staticmethod
     def log_error(errtxt):
         """
         Log error text
         """
-        logging.error("| %s" % errtxt)
+        logging.error("| {}".format(errtxt))
 
     @staticmethod
     def log_warning(errtxt):
         """
         Log error text
         """
-        logging.warning("| %s" % errtxt)
+        logging.warning("| {}".format(errtxt))
 
     def send_mail(self):
         """
@@ -140,13 +140,13 @@ class SMTools:
         except Exception:
             self.fatal_error("error when sending mail")
         datenow = datetime.datetime.now()
-        txt = ("Dear admin,\n\nThe job %s has run today at %s." % (script, datenow))
+        txt = ("Dear admin,\n\nThe job {} has run today at {}.".format(script, datenow))
         txt += "\n\nUnfortunately there have been some error\n\nPlease see the following list:\n"
         txt += self.error_text
         msg = MIMEText(txt)
         sender = CONFIGSM['smtp']['sender']
         recipients = CONFIGSM['smtp']['receivers']
-        msg['Subject'] = ("[%s] on server %s from %s has errors" % (script, self.hostname, datenow))
+        msg['Subject'] = ("[{}] on server {} from {} has errors".format(script, self.hostname, datenow))
         msg['From'] = sender
         msg['To'] = ", ".join(recipients)
         # noinspection PyBroadException
@@ -177,7 +177,7 @@ class SMTools:
         try:
             self.session = self.client.auth.login(CONFIGSM['suman']['user'], CONFIGSM['suman']['password'])
         except xmlrpc.client.Fault:
-            self.fatal_error("| %s | Unable to login to SUSE Manager server" % CONFIGSM['suman']['server'])
+            self.fatal_error("| {} | Unable to login to SUSE Manager server".format(CONFIGSM['suman']['server']))
 
     def suman_logout(self):
         """
@@ -186,4 +186,4 @@ class SMTools:
         try:
             self.client.auth.logout(self.session)
         except xmlrpc.client.Fault:
-            self.fatal_error("| %s | Unable to logout from SUSE Manager" % CONFIGSM['suman']['server'])
+            self.fatal_error("| {} | Unable to logout from SUSE Manager".format(CONFIGSM['suman']['server']))
