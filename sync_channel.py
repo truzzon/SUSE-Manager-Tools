@@ -32,7 +32,7 @@ def main():
     Main Function
     """
     global smt
-    smt = smtools.SMTools()
+    smt = smtools.SMTools("sync_channel")
     parser = argparse.ArgumentParser(formatter_class=RawTextHelpFormatter, description=('''\
          Usage:
          sync_channel.py

@@ -60,13 +60,15 @@ class SMTools:
     hostname = ""
     client = ""
     session = ""
+    program = "smtools"
 
-    def __init__(self, hostname="", hostbased=False):
+    def __init__(self, program, hostname="", hostbased=False):
         """
         Constructor.
         """
         self.hostname = hostname
         self.hostbased = hostbased
+        self.program = program
         log_dir = CONFIGSM['dirs']['log_dir']
         if self.hostbased:
             if not os.path.exists(log_dir):
@@ -75,7 +77,7 @@ class SMTools:
         else:
             if not os.path.exists(CONFIGSM['dirs']['log_dir']):
                 os.makedirs(CONFIGSM['dirs']['log_dir'])
-            log_name = os.path.join(log_dir, "smtools.log")
+            log_name = os.path.join(log_dir, self.program + ".log")
         logging.basicConfig(filename=log_name,
                             filemode='a',
                             format='%(asctime)s : %(levelname)s | %(message)s',
@@ -105,29 +107,26 @@ class SMTools:
         self.error_text += errtxt
         self.error_text += "\n"
         self.error_found = True
-        logging.error("| {}".format(errtxt))
+        self.log.error("| {}".format(errtxt))
         self.close_program(return_code)
 
-    @staticmethod
-    def log_info(errtxt):
+    def log_info(self, errtxt):
         """
         Log info text
         """
-        logging.info("| {}".format(errtxt))
+        self.log.info("| {}".format(errtxt))
 
-    @staticmethod
-    def log_error(errtxt):
+    def log_error(self, errtxt):
         """
         Log error text
         """
-        logging.error("| {}".format(errtxt))
+        self.log.error("| {}".format(errtxt))
 
-    @staticmethod
-    def log_warning(errtxt):
+    def log_warning(self, errtxt):
         """
         Log error text
         """
-        logging.warning("| {}".format(errtxt))
+        self.log.warning("| {}".format(errtxt))
 
     def send_mail(self):
         """

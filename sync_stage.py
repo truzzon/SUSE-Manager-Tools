@@ -94,7 +94,7 @@ def main():
     Main section
     """
     global smt
-    smt = smtools.SMTools()
+    smt = smtools.SMTools("sync_stage")
     parser = argparse.ArgumentParser(formatter_class=RawTextHelpFormatter, description=('''\
          Usage:
          sync_channel.py
