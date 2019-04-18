@@ -163,7 +163,7 @@ class SMTools:
 
     def close_program(self, return_code=0):
         """Close program and send mail if there is an error"""
-        self.log.info(f"| Finished {datetime.datetime.now()}")
+        self.log.info("| Finished")
         if self.error_found and CONFIGSM['smtp']['sendmail']:
             self.send_mail()
         sys.exit(return_code)
