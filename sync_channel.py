@@ -57,17 +57,20 @@ def main():
         message += ' Does the channels exist or is it a cloned channel?'
         smt.fatal_error(message)
     smt.log_info('     Errata .....')
+    total = None
     try:
         # noinspection PyUnboundLocalVariable
-        smt.client.channel.software.mergeErrata(smt.session, clone_label, channel)
+        total = smt.client.channel.software.mergeErrata(smt.session, clone_label, channel)
     except xmlrpc.client.Fault:
         smt.fatal_error('Unable to get errata for channel {}'.format(channel))
-    time.sleep(20)
+    smt.log_info('     Merging {} patches'.format(len(total)))
+    time.sleep(120)
     smt.log_info('     Packages .....')
     try:
-        smt.client.channel.software.mergePackages(smt.session, clone_label, channel)
+        total = smt.client.channel.software.mergePackages(smt.session, clone_label, channel)
     except xmlrpc.client.Fault:
-        smt.fatal_error('Unable to get packages for channel {}'.format(channel))
+        smt.minor_error('Unable to get packages for channel {}.'.format(channel))
+    smt.log_info('     Merging {} packages'.format(len(total)))
     smt.log_info("FINISHED")
     smt.close_program()
 

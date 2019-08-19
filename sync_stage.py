@@ -49,6 +49,7 @@ def create_backup(par):
         smt.client.channel.software.clone(smt.session, par, clo_str, False)
     except xmlrpc.client.Fault:
         smt.fatal_error('Unable to create backup. Please check logs')
+    child_channels = None
     try:
         child_channels = smt.client.channel.software.listChildren(smt.session, par)
     except xmlrpc.client.Fault:
@@ -69,6 +70,7 @@ def clone_channel(channel):
     """
     Clone channel
     """
+    total = []
     chan = channel.get('label')
     smt.log_info('Updating %s' % chan)
     try:
@@ -78,15 +80,17 @@ def clone_channel(channel):
         return
     smt.log_info('     Errata .....')
     try:
-        smt.client.channel.software.mergeErrata(smt.session, clone_label, chan)
+        total = smt.client.channel.software.mergeErrata(smt.session, clone_label, chan)
     except xmlrpc.client.Fault:
         smt.minor_error('Unable to get errata for channel {}.'.format(chan))
-    time.sleep(10)
+    smt.log_info('     Merging {} patches'.format(len(total)))
+    time.sleep(120)
     smt.log_info('     Packages .....')
     try:
-        smt.client.channel.software.mergePackages(smt.session, clone_label, chan)
+        total = smt.client.channel.software.mergePackages(smt.session, clone_label, chan)
     except xmlrpc.client.Fault:
         smt.minor_error('Unable to get packages for channel {}.'.format(chan))
+    smt.log_info('     Merging {} packages'.format(len(total)))
 
 
 def main():
@@ -105,6 +109,7 @@ def main():
                         help="creates a backup of the stage first.")
     parser.add_argument('--version', action='version', version='%(prog)s 1.0.1, February 10, 2019')
     args = parser.parse_args()
+    parent = parent_details = child_channels = None
     if not args.channel:
         smt.fatal_error("No parent channel to be cloned given. Aborting operation")
     else:
