@@ -60,22 +60,26 @@ class SMTools:
     hostname = ""
     client = ""
     session = ""
+    sid = ""
+    program = "smtools"
 
-    def __init__(self, hostname="", hostbased=False):
+    def __init__(self, program, hostname="", hostbased=False):
         """
         Constructor.
         """
         self.hostname = hostname
         self.hostbased = hostbased
+        self.program = program
         log_dir = CONFIGSM['dirs']['log_dir']
         if self.hostbased:
+            log_dir += "/"+self.program
             if not os.path.exists(log_dir):
                 os.makedirs(log_dir)
-            log_name = os.path.join(log_dir, self.hostname + ".log")
+            log_name = log_dir + "/" + self.hostname + ".log"
         else:
             if not os.path.exists(CONFIGSM['dirs']['log_dir']):
                 os.makedirs(CONFIGSM['dirs']['log_dir'])
-            log_name = os.path.join(log_dir, "smtools.log")
+            log_name = os.path.join(log_dir, self.program + ".log")
         logging.basicConfig(filename=log_name,
                             filemode='a',
                             format='%(asctime)s : %(levelname)s | %(message)s',
@@ -85,6 +89,7 @@ class SMTools:
         console.setLevel(logging.DEBUG)
         if self.hostbased:
             self.log = logging.getLogger(self.hostname)
+            self.log.addHandler(console)
         else:
             self.log = logging.getLogger('')
             self.log.addHandler(console)
@@ -105,29 +110,26 @@ class SMTools:
         self.error_text += errtxt
         self.error_text += "\n"
         self.error_found = True
-        logging.error("| {}".format(errtxt))
+        self.log.error("| {}".format(errtxt))
         self.close_program(return_code)
 
-    @staticmethod
-    def log_info(errtxt):
+    def log_info(self, errtxt):
         """
         Log info text
         """
-        logging.info("| {}".format(errtxt))
+        self.log.info("| {}".format(errtxt))
 
-    @staticmethod
-    def log_error(errtxt):
+    def log_error(self, errtxt):
         """
         Log error text
         """
-        logging.error("| {}".format(errtxt))
+        self.log.error("| {}".format(errtxt))
 
-    @staticmethod
-    def log_warning(errtxt):
+    def log_warning(self, errtxt):
         """
         Log error text
         """
-        logging.warning("| {}".format(errtxt))
+        self.log.warning("| {}".format(errtxt))
 
     def send_mail(self):
         """
@@ -164,7 +166,15 @@ class SMTools:
 
     def close_program(self, return_code=0):
         """Close program and send mail if there is an error"""
-        self.log.info("| Finished {}".format(datetime.datetime.now()))
+        self.suman_logout()
+        self.log.info("| Finished")
+        if self.error_found and CONFIGSM['smtp']['sendmail']:
+            self.send_mail()
+        sys.exit(return_code)
+
+    def exit_program(self, return_code=0):
+        """Exit program and send mail if there is an error"""
+        self.log.info("| Finished")
         if self.error_found and CONFIGSM['smtp']['sendmail']:
             self.send_mail()
         sys.exit(return_code)
@@ -186,4 +196,23 @@ class SMTools:
         try:
             self.client.auth.logout(self.session)
         except xmlrpc.client.Fault:
-            self.fatal_error("| {} | Unable to logout from SUSE Manager".format(CONFIGSM['suman']['server']))
+            self.log_error("| {} | Unable to logout from SUSE Manager".format(CONFIGSM['suman']['server']))
+
+    def get_server_id(self):
+        """
+        Get system Id from host
+        """
+        all_sid = ""
+        try:
+            all_sid=self.client.system.getId(self.session, self.hostname)
+        except xmlrpc.client.Fault:
+            self.fatal_error("Unable to get systemid from system {}. Is this system registered?".format(self.hostname))
+        system_id = 0
+        for x in all_sid:
+            if system_id == 0:
+               system_id = x.get('id')
+            else:
+               self.fatal_error("Duplicate system {}. Please fix and run again.".format(self.hostname))
+        if system_id == 0:
+            self.fatal_error("Unable to get systemid from system {}. Is this system registered?".format(self.hostname))
+        return system_id

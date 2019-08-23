@@ -1,18 +1,37 @@
 suman:
-    server: <hostname.domain from SUSE Manager Server>
-    user: <user>
+    server: <SUSE Manager Server fqdn>
+    user: <SUSE Manager account with engough rights te perform needed actions>
     password: <password>
 
 smtp:
    # sendmail: True is a mail should be send for minor and major errors. False if no mail should be send     
    sendmail: True
    receivers:
-     - <mail address>
-   sender: <mail address to be used for sending mail>
-   server: <smtp host or 127.0.0.1 is the SUSE Manager Server itself can be used>
+     - <mail reciepent 1>
+     - <mail reciepent 2>
+     - <mail reciepent 3>
+     - ....
+     - <mail reciepent n>
+
+   sender: <sender of the mail>
+   server: <smtp server>
 
 dirs:
    log_dir: /var/log/rhn
+
+maintenance:
+   exclude_for_patch:
+      - lx0001
+      - lx0002
+   sp_migration:
+      sles12-sp1: sles12-sp4
+      sles12-sp2: sles12-sp4
+      sles12-sp3: sles12-sp4
+      sles15-sp0: sles15-sp1
+   exception_sp:
+      sles12-sp4:
+      - lx0003
+      - lx0004
 
 channel_cloner:
    sles-11-sp4-x86_64:

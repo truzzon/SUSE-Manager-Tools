@@ -174,7 +174,7 @@ def main():
     Main function.
     """
     global smt
-    smt = smtools.SMTools()
+    smt = smtools.SMTools("cve_report")
     parser = argparse.ArgumentParser(formatter_class=RawTextHelpFormatter, description="CVE report tool")
     parser.add_argument("-c", "--cve", help="list of CVEs to be checked, comma delimeted, no spaces", required=True)
     parser.add_argument("-r", "--reverse", action="store_true", default=0,
