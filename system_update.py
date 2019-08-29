@@ -36,24 +36,24 @@ def do_apply_updates_errata(system_id):
     """
     schedule action chain with updates for errata
     """
-    alluppatches = actionid = None
+    updatable_patches = schedule_id = None
     patches = []
     try:
-        alluppatches = smt.client.system.getRelevantErrata(smt.session, system_id)
+        updatable_patches = smt.client.system.getRelevantErrata(smt.session, system_id)
     except xmlrpc.client.Fault:
         smt.fatal_error("Unable to get a list of updatable rpms")
-    for patch in alluppatches:
+    for patch in updatable_patches:
         patches.append(patch.get('id'))
     if not patches:
         smt.log_info('no errata updates available')
         return 0
     try:
-        actionid = smt.client.system.scheduleApplyErrata(smt.session, system_id, patches, datetime.datetime.now())
+        schedule_id = smt.client.system.scheduleApplyErrata(smt.session, system_id, patches, datetime.datetime.now())
     except xmlrpc.client.Fault as e:
         smt.fatal_error("unable to schedule job for server. Error: {}".format(e))
     smt.log_info("Errata update running")
     time.sleep(90)
-    return actionid[0]
+    return schedule_id[0]
 
 
 def do_apply_updates_packages(system_id):
@@ -61,65 +61,65 @@ def do_apply_updates_packages(system_id):
     schedule action chain with updates
     """
     rpms = []
-    alluprpms = actionid = None
+    updatable_rpms = schedule_id = None
     try:
-        alluprpms = smt.client.system.listLatestUpgradablePackages(smt.session, system_id)
+        updatable_rpms = smt.client.system.listLatestUpgradablePackages(smt.session, system_id)
     except xmlrpc.client.Fault:
         smt.fatal_error("Unable to get a list of updatable rpms")
-    for rpm in alluprpms:
+    for rpm in updatable_rpms:
         rpms.append(rpm.get('to_package_id'))
     if not rpms:
         smt.log_info('no package updates available')
         return 0
     try:
-        actionid = smt.client.system.schedulePackageInstall(smt.session, system_id, rpms, datetime.datetime.now())
+        schedule_id = smt.client.system.schedulePackageInstall(smt.session, system_id, rpms, datetime.datetime.now())
     except xmlrpc.client.Fault as e:
         smt.fatal_error("unable to schedule job for server. Error: {}".format(e))
     smt.log_info("Package update running")
     time.sleep(90)
-    return actionid[0]
+    return schedule_id
 
 
 def do_upgrade(system_id, server, no_reboot):
     """
     do upgrade of packages
     """
-    sched_id = do_apply_updates_errata(system_id)
+    schedule_id = do_apply_updates_errata(system_id)
     reboot_needed_errata = True
     reboot_needed_package = True
-    if sched_id == 0:
+    if schedule_id == 0:
         smt.log_info("Errata update not needed. Checking for package update")
         reboot_needed_errata = False
     else:
-        (res_f, res_c) = check_progress(sched_id, system_id, server)
-        if res_c == 1 and not no_reboot:
+        (result_failed, result_completed, result_message) = check_progress(schedule_id, system_id, server)
+        if result_completed == 1 and not no_reboot:
             smt.log_info("Errata update completed successful.")
-        elif res_c == 1 and no_reboot:
+        elif result_completed == 1 and no_reboot:
             smt.log_info("Errata update completed successful.")
             smt.log_info("But server {} will not be rebooted. Please reboot manually ASAP.".format(server))
         else:
-            smt.fatal_error("Errata update failed!!!!! Server {} will not be updated!".format(server))
+            smt.fatal_error("Errata update failed!!!!! Server {} will not be updated!\n\nThe error messages is:\n{}".format(server, result_message))
         try:
             smt.client.system.schedulePackageRefresh(smt.session, system_id, datetime.datetime.now())
         except xmlrpc.client.Fault:
             smt.fatal_error("Package refresh failed for system %s!".format(server))
         time.sleep(30)
-    sched_id = do_apply_updates_packages(system_id)
-    if sched_id == 0:
+    schedule_id = do_apply_updates_packages(system_id)
+    if schedule_id == 0:
         smt.log_info("Package update not needed.")
         if reboot_needed_errata:
             reboot_needed_package = True
         else:
             reboot_needed_package = False
     else:
-        (res_f, res_c) = check_progress(sched_id, system_id, server)
-        if res_c == 1 and not no_reboot:
+        (result_failed, result_completed, result_message) = check_progress(schedule_id, system_id, server)
+        if result_completed == 1 and not no_reboot:
             smt.log_info("Package update completed successful.")
-        elif res_c == 1 and no_reboot:
+        elif result_completed == 1 and no_reboot:
             smt.log_info("Package update completed successful.")
             smt.log_info("But server {} will not be rebooted. Please reboot manually ASAP.".format(server))
         else:
-            smt.fatal_error("Package update failed!!!!! Server {} will not be updated!".format(server))
+            smt.fatal_error("Package update failed!!!!! Server {} will not be updated!!\n\nThe error messages is:\n{}".format(server, result_message))
         try:
             smt.client.system.schedulePackageRefresh(smt.session, system_id, datetime.datetime.now())
         except xmlrpc.client.Fault:
@@ -130,13 +130,13 @@ def do_upgrade(system_id, server, no_reboot):
             smt.fatal_error("Package refresh failed for system %s!".format(server))
     if not no_reboot and reboot_needed_package and reboot_needed_errata:
         try:
-            sched_id = smt.client.system.scheduleReboot(smt.session, system_id, datetime.datetime.now())
+            schedule_id = smt.client.system.scheduleReboot(smt.session, system_id, datetime.datetime.now())
         except xmlrpc.client.Fault:
             smt.fatal_error("Unable to reboot server {}!".format(server))
         smt.log_info("Rebooting server")
         time.sleep(240)
-        (res_f, res_c) = check_progress(sched_id, system_id, server)
-        if res_c == 1:
+        (result_failed, result_completed, result_message) = check_progress(schedule_id, system_id, server)
+        if result_completed == 1:
             smt.log_info("Reboot completed successful.")
         else:
             smt.log_info("Reboot failed. Please reboot manually ASAP.")
@@ -190,9 +190,9 @@ def do_spmigrate(system_id, server, new_basechannel, no_reboot):
     smt.log_info("SupportPack Migration dry run running for system {}".format(server))
     smt.log_info("New basechannel will be: {}".format(new_basechannel))
     time.sleep(60)
-    (res_f, res_c) = check_progress(action_id, system_id, server)
+    (result_failed, result_completed, result_message) = check_progress(action_id, system_id, server)
     res_o = get_spmig_details(action_id, system_id, server)
-    if res_f == 0:
+    if result_failed == 0:
         try:
             action_id = smt.client.system.scheduleSPMigration(smt.session, system_id, new_basechannel,
                                                               new_child_channels, False, datetime.datetime.now())
@@ -205,14 +205,14 @@ def do_spmigrate(system_id, server, new_basechannel, no_reboot):
                                                                                                             res_o))
     smt.log_info("SupportPack Migration running for system {}".format(server))
     time.sleep(300)
-    (res_f, res_c) = check_progress(action_id, system_id, server)
-    if res_c == 1 and not no_reboot:
+    (result_failed, result_completed, result_message) = check_progress(action_id, system_id, server)
+    if result_completed == 1 and not no_reboot:
         smt.log_info("Support Pack migration completed successful, rebooting server {}".format(server))
         try:
             smt.client.system.scheduleReboot(smt.session, system_id, datetime.datetime.now())
         except xmlrpc.client.Fault:
             smt.fatal_error("Unable to reboot server {}!".format(server))
-    elif res_c == 1 and no_reboot:
+    elif result_completed == 1 and no_reboot:
         smt.log_info(
             "Support Pack migration completed successful, but server {} will not be rebooted. Please reboot manually ASAP.".format(
                 server))
@@ -336,31 +336,27 @@ def event_status(action_id, system_id, server):
     """
     Check status of event
     """
-    result = None
+    results = None
     try:
-        result = smt.client.system.listSystemEvents(smt.session, system_id)
+        results = smt.client.system.listSystemEvents(smt.session, system_id)
     except xmlrpc.client.Fault:
         smt.fatal_error("Unable to get system events for system {}!".format(server))
-    failed_count = completed_count = None
-    for x in result:
-        if x.get('id') == action_id:
-            failed_count = x.get('failed_count')
-            completed_count = x.get('successful_count')
-            return failed_count, completed_count
+    for result in results:
+        if result.get('id') == action_id:
+            return result.get('failed_count'), result.get('successful_count'), result.get('result_msg')
     smt.fatal_error("System {} is not having a event ID. Aborting!".format(server))
-    return failed_count, completed_count
 
 
 def check_progress(action_id, system_id, server):
     """
     Check progress of action
     """
-    (failed_count, completed_count) = event_status(action_id, system_id, server)
+    (failed_count, completed_count, result_message) = event_status(action_id, system_id, server)
     while failed_count == 0 and completed_count == 0:
-        (failed_count, completed_count) = event_status(action_id, system_id, server)
+        (failed_count, completed_count, result_message) = event_status(action_id, system_id, server)
         smt.log_info("Still Running")
         time.sleep(15)
-    return failed_count, completed_count
+    return failed_count, completed_count, result_message
 
 
 def server_is_exception_update(server):
@@ -390,8 +386,8 @@ def do_deploy_config(server, sid):
                                                                  xmlrpc.client.DateTime(datetime.datetime.now()), False)
         except xmlrpc.client.Fault:
             smt.fatal_error("Error deploying configuration")
-        (res_f, res_c) = check_progress(action_id, sid, server)
-        if res_c == 1:
+        (result_failed, result_completed, result_message) = check_progress(action_id, sid, server)
+        if result_completed == 1:
             smt.log_info("Highstate completed successful.")
         else:
             smt.log_info("Highstate failed. Continuing")
