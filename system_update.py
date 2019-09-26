@@ -32,20 +32,26 @@ import smtools
 __smt = None
 
 
-def do_apply_updates_errata(system_id):
+def do_apply_updates_errata(system_id, updateble_patches, salt_minion_patch_id, zypper_patch_id):
     """
     schedule action chain with updates for errata
     """
-    updatable_patches = schedule_id = None
+    schedule_id = None
     patches = []
-    try:
-        updatable_patches = smt.client.system.getRelevantErrata(smt.session, system_id)
-    except xmlrpc.client.Fault:
-        smt.fatal_error("Unable to get a list of updatable rpms")
-    for patch in updatable_patches:
-        patches.append(patch.get('id'))
+    for patch in updateble_patches:
+        no_zypper = True
+        no_salt = True
+        for id in salt_minion_patch_id:
+            if patch.get('id') == id:
+                no_salt = False
+                break
+        for id in zypper_patch_id:
+            if patch.get('id') == id:
+                no_salt = False
+                break
+        if no_zypper and no_salt:
+            patches.append(patch.get('id'))
     if not patches:
-        smt.log_info('no errata updates available')
         return 0
     try:
         schedule_id = smt.client.system.scheduleApplyErrata(smt.session, system_id, patches, datetime.datetime.now())
@@ -54,6 +60,63 @@ def do_apply_updates_errata(system_id):
     smt.log_info("Errata update running")
     time.sleep(90)
     return schedule_id[0]
+
+
+def do_update_minion(system_id, updateble_patches):
+    """
+    schedule action chain with updates for errata
+    """
+    system_entitlement = None
+    try:
+        system_entitlement = smt.client.system.getDetails(smt.session, system_id).get('base_entitlement')
+    except xmlrpc.client.Fault:
+        smt.fatal_error("Unable to get a list of updatable rpms")
+    if not "salt" in system_entitlement:
+        return 0
+    patches = []
+    for patch in updateble_patches:
+        if "salt" in patch.get('advisory_synopsis').lower():
+            patches.append(patch.get('id'))
+    if not patches:
+        smt.log_info('No update for salt-minion"')
+        return []
+    try:
+        smt.client.system.scheduleApplyErrata(smt.session, system_id, patches, datetime.datetime.now())
+    except xmlrpc.client.Fault as e:
+        smt.fatal_error("unable to schedule job for server. Error: {}".format(e))
+    smt.log_info("Updating salt-minion")
+    time.sleep(60)
+    try:
+        smt.client.system.schedulePackageRefresh(smt.session, system_id, datetime.datetime.now())
+    except xmlrpc.client.Fault:
+        smt.fatal_error("Package refresh failed for system ")
+    time.sleep(30)
+    return patches
+
+
+def do_update_zypper(system_id, updateble_patches):
+    """
+    schedule action chain with updates for errata
+    """
+    patches = []
+    for patch in updateble_patches:
+        if "zlib" in patch.get('advisory_synopsis').lower() or "zypp" in patch.get('advisory_synopsis').lower():
+            patches.append(patch.get('id'))
+    if not patches:
+        smt.log_info('No update for zypper"')
+        return []
+    try:
+        smt.client.system.scheduleApplyErrata(smt.session, system_id, patches, datetime.datetime.now())
+    except xmlrpc.client.Fault as e:
+        smt.fatal_error("unable to schedule job for server. Error: {}".format(e))
+    smt.log_info("Updating zypper")
+    time.sleep(60)
+    try:
+        smt.client.system.schedulePackageRefresh(smt.session, system_id, datetime.datetime.now())
+    except xmlrpc.client.Fault:
+        smt.fatal_error("Package refresh failed for system")
+    time.sleep(30)
+    return patches
 
 
 def do_apply_updates_packages(system_id):
@@ -84,12 +147,24 @@ def do_upgrade(system_id, server, no_reboot):
     """
     do upgrade of packages
     """
-    schedule_id = do_apply_updates_errata(system_id)
-    reboot_needed_errata = True
+    updateble_patches = None
+    patches = []
+    try:
+        updateble_patches = smt.client.system.getRelevantErrata(smt.session, system_id)
+    except xmlrpc.client.Fault:
+        smt.fatal_error("Unable to get a list of updatable rpms")
+    if updateble_patches:
+        salt_minion_patch_id = do_update_minion(system_id, updateble_patches)
+        zypper_patch_id = do_update_zypper(system_id, updateble_patches)
+        schedule_id = do_apply_updates_errata(system_id, updateble_patches, salt_minion_patch_id, zypper_patch_id)
+        reboot_needed_errata = True
+    else:
+        smt.log_info('no errata updates available')
+        schedule_id = 0
+        reboot_needed_errata = False
     reboot_needed_package = True
     if schedule_id == 0:
         smt.log_info("Errata update not needed. Checking for package update")
-        reboot_needed_errata = False
     else:
         (result_failed, result_completed, result_message) = check_progress(schedule_id, system_id, server)
         if result_completed == 1 and not no_reboot:
