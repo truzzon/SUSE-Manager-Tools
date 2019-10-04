@@ -496,7 +496,7 @@ def main():
     global smt
     parser = argparse.ArgumentParser(formatter_class=RawTextHelpFormatter, description=('''\
         Usage:
-        do_swat.py 
+        system_update.py 
             '''))
     parser.add_argument('-s', '--server', help='name of the server to receive config update. Required')
     parser.add_argument("-n", "--noreboot", action="store_true", default=0,
