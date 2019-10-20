@@ -434,6 +434,20 @@ def check_progress(action_id, system_id, server):
     return failed_count, completed_count, result_message
 
 
+def system_is_inactive(system_id):
+    """
+    Check if the system is not inactive for at least 1 day
+    """
+    try:
+        inactive_systems = smt.client.system.listInactiveSystems(smt.session, 1)
+    except xmlrpc.client.Fault as e:
+        smt.fatal_error(("Unable to receive list of inactive systems. Error: \n{}".format(e)))
+    for system in inactive_systems:
+        if system_id == system.get('id'):
+            return True
+    return False
+
+
 def server_is_exception_update(server):
     """
     Check if server is an exception for updating
@@ -476,6 +490,8 @@ def update_server(args):
     system_id = smt.get_server_id()
     if server_is_exception_update(args.server):
         smt.fatal_error("Server {} is in list of exceptions and will not be updated.".format(args.server))
+    if system_is_inactive(system_id):
+        smt.fatal_error("Server {} is inactive for at least a day. Please check. System will not be updated.".format(args.server))
     if args.applyconfig:
         do_deploy_config(args.server, system_id)
     (do_spm, new_basechannel) = check_for_sp_migration(args.server, system_id)

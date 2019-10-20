@@ -4,7 +4,7 @@
 # GNU Public License. No warranty. No Support
 # For question/suggestions/bugs mail: michael.brookhuis@suse.com
 #
-# Version: 2019-02-10
+# Version: 2019-10-17
 #
 # Created by: SUSE Michael Brookhuis
 #
@@ -15,6 +15,7 @@
 # 2019-01-14 M.Brookhuis - Added yaml
 #                        - Added logging
 # 2019-02-10 M.Brookhuis - General update
+# 2019-10-17 M.Brookhuis - Added support for projects and environments
 
 """
 This program will sync the give channel
@@ -93,6 +94,79 @@ def clone_channel(channel):
     smt.log_info('     Merging {} packages'.format(len(total)))
 
 
+def update_project(args):
+    """
+    Updating an environment within a project
+    """
+    project_details = None
+    environment_present = False
+    try:
+        project_details = smt.client.contentmanagement.listProjectEnvironments(smt.session, args.project)
+    except xmlrpc.client.Fault:
+        message = ('Unable to get details of given project {}.'.format(args.project))
+        message += ' Does the project exist?'
+        smt.fatal_error(message)
+    number_in_list = 1
+    for environment_details in project_details:
+        if environment_details.get('label') == args.environment:
+            environment_present = True
+            smt.log_info('Updating environment {} in the project {}.'.format(args.environment, args.project))
+            if args.message:
+                build_message = args.message
+            else:
+                dat = ("%s-%02d-%02d" % (datetime.datetime.now().year, datetime.datetime.now().month, \
+                                       datetime.datetime.now().day))
+                build_message = "Created on {}".format(dat)
+            if number_in_list == 1:
+                try:
+                    smt.client.contentmanagement.buildProject(smt.session, args.project, build_message)
+                except xmlrpc.client.Fault:
+                    message = (
+                        'Unable to update environment {} in the project {}.'.format(args.environment, args.project))
+                    smt.fatal_error(message)
+                break
+            else:
+                try:
+                    smt.client.contentmanagement.promoteProject(smt.session, args.project, environment_details.get('previousEnvironmentLabel'))
+                except xmlrpc.client.Fault:
+                    message = (
+                        'Unable to update environment {} in the project {}.'.format(args.environment, args.project))
+                    smt.fatal_error(message)
+                break
+        number_in_list += 1
+    if not environment_present:
+        message = ('Unable to get details of environment {} for project {}.'.format(args.environment, args.project))
+        message += ' Does the environment exist?'
+        smt.fatal_error(message)
+
+
+def update_stage(args):
+    """
+    Updating the stages.
+    """
+    parent_details = child_channels = None
+    try:
+        parent_details = smt.client.channel.software.getDetails(smt.session, args.parent)
+    except xmlrpc.client.Fault:
+        message = ('Unable to get details of parent channel {}.'.format(args.parent))
+        message += ' Does the channel exist or is it a cloned channel?'
+        smt.fatal_error(message)
+    if parent_details.get('parent_channel_label'):
+        smt.fatal_error("Given parent channel {}, is not a parent channel.".format(args.parent))
+    try:
+        child_channels = smt.client.channel.software.listChildren(smt.session, args.parent)
+    except xmlrpc.client.Fault:
+        smt.fatal_error('Unable to get list child channels. Please check logs')
+    smt.log_info("Updating the following channels with latest patches and packages")
+    smt.log_info("================================================================")
+    if args.backup:
+        create_backup(args.parent)
+    for channel in child_channels:
+        if "pool" not in channel.get('label'):
+            clone_channel(channel)
+            time.sleep(10)
+
+
 def main():
     """
     Main section
@@ -107,34 +181,19 @@ def main():
     parser.add_argument("-c", "--channel", help="name of the cloned parent channel to be updates")
     parser.add_argument("-b", "--backup", action="store_true", default=0, \
                         help="creates a backup of the stage first.")
-    parser.add_argument('--version', action='version', version='%(prog)s 1.0.1, February 10, 2019')
+    parser.add_argument("-p", "--project", help="name of the project to be updated. --environment is also mandatory")
+    parser.add_argument("-e", "--environment", help="the project to be updated. Mandatory with --project")
+    parser.add_argument("-m", "--message", help="Message to be displayed when build is updated")
+    parser.add_argument('--version', action='version', version='%(prog)s 1.0.2, October 17, 2019')
     args = parser.parse_args()
-    parent = parent_details = child_channels = None
-    if not args.channel:
-        smt.fatal_error("No parent channel to be cloned given. Aborting operation")
-    else:
-        parent = args.channel
     smt.suman_login()
-    try:
-        parent_details = smt.client.channel.software.getDetails(smt.session, parent)
-    except xmlrpc.client.Fault:
-        message = ('Unable to get details of parent channel {}.'.format(parent))
-        message += ' Does the channel exist or is it a cloned channel?'
-        smt.fatal_error(message)
-    if parent_details.get('parent_channel_label'):
-        smt.fatal_error("Given parent channel {}, is not a parent channel.".format(parent))
-    try:
-        child_channels = smt.client.channel.software.listChildren(smt.session, parent)
-    except xmlrpc.client.Fault:
-        smt.fatal_error('Unable to get list child channels. Please check logs')
-    smt.log_info("Updating the following channels with latest patches and packages")
-    smt.log_info("================================================================")
-    if args.backup:
-        create_backup(parent)
-    for channel in child_channels:
-        if "pool" not in channel.get('label'):
-            clone_channel(channel)
-            time.sleep(10)
+    if args.channel:
+        update_stage(args)
+    elif args.project and args.environment:
+        update_project(args)
+    else:
+        smt.fatal_error("Option --channel or options --project and --environment are not given. Aborting operation")
+
     smt.close_program()
 
 

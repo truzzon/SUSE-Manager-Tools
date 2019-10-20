@@ -1,25 +1,23 @@
 suman:
-    server: <SUSE Manager Server fqdn>
-    user: <SUSE Manager account with engough rights te perform needed actions>
-    password: <password>
+    server: mbsm4.mb.loc
+    user: sm-admin
+    password: suse1234
+    timeout: 60
 
 smtp:
    # sendmail: True is a mail should be send for minor and major errors. False if no mail should be send     
-   sendmail: True
+   sendmail: False
    receivers:
-     - <mail reciepent 1>
-     - <mail reciepent 2>
-     - <mail reciepent 3>
-     - ....
-     - <mail reciepent n>
-
-   sender: <sender of the mail>
-   server: <smtp server>
+     - michael.brookhuis@suse.com
+   sender: mbsm4@mb.loc
+   server: 127.0.0.1
 
 dirs:
-   log_dir: /var/log/rhn
+   log_dir: /var/log/mb
+   scripts_dir: /work/scripts/SUSE-Manager-Tools
 
 maintenance:
+   wait_between_systems: 1
    exclude_for_patch:
       - lx0001
       - lx0002
@@ -27,7 +25,6 @@ maintenance:
       sles12-sp1: sles12-sp4
       sles12-sp2: sles12-sp4
       sles12-sp3: sles12-sp4
-      sles15-sp0: sles15-sp1
    exception_sp:
       sles12-sp4:
       - lx0003
