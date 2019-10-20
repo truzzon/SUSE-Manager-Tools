@@ -1,8 +1,9 @@
 # SUSE-Manager-Tools
 
 General configuration:
+
 configsm.yaml
-In this yaml the SUSE Manager Server and the credentials have to be entered. Also the are more options:
+- In this yaml the SUSE Manager Server and the credentials have to be entered. Also the are more options:
 - location of the log dirs
 - Should a mail being send in case of an error and to whom
 - information needed for SP migration for system update
