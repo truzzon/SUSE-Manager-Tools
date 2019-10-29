@@ -156,7 +156,7 @@ def manage_project(args):
     project_present = check_if_projectexists(args.project)
     if project_present:
         # project is present so only add and delete channel is valid
-        if args.environment or args.basechannel:
+        if args.environment and args.basechannel:
             smt.fatal_error("Project {} already exists and the options given can only be used for creation new project. Aborting".format(args.project))
         if args.addchannel:
             add_channels_to_project(args.project, args.addchannel)

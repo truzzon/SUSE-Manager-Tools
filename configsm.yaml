@@ -1,20 +1,20 @@
 suman:
-    server: mbsm4.mb.loc
-    user: sm-admin
-    password: suse1234
+    server: <suse manager server fqdn>
+    user: <user with enough write to perform actions>
+    password: <password>
     timeout: 60
 
 smtp:
    # sendmail: True is a mail should be send for minor and major errors. False if no mail should be send     
-   sendmail: False
+   sendmail: True
    receivers:
-     - michael.brookhuis@suse.com
-   sender: mbsm4@mb.loc
+     - <mail recipient>
+   sender: <mail sender>
    server: 127.0.0.1
 
 dirs:
-   log_dir: /var/log/mb
-   scripts_dir: /work/scripts/SUSE-Manager-Tools
+   log_dir: <log dir>
+   scripts_dir: /opt/susemanager
 
 maintenance:
    wait_between_systems: 1
