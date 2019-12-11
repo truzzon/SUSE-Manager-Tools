@@ -216,3 +216,23 @@ class SMTools:
         if system_id == 0:
             self.fatal_error("Unable to get systemid from system {}. Is this system registered?".format(self.hostname))
         return system_id
+
+    def get_server_id_nofatal(self):
+        """
+        Get system Id from host
+        """
+        all_sid = ""
+        try:
+            all_sid=self.client.system.getId(self.session, self.hostname)
+        except xmlrpc.client.Fault:
+            self.log_error("Unable to get systemid from system {}. Is this system registered?".format(self.hostname))
+            return 0
+        system_id = 0
+        for x in all_sid:
+            if system_id == 0:
+               system_id = x.get('id')
+            else:
+               self.log_error("Duplicate system {}. Please fix and run again.".format(self.hostname))
+        if system_id == 0:
+            self.log_error("Unable to get systemid from system {}. Is this system registered?".format(self.hostname))
+        return system_id

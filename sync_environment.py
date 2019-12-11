@@ -20,12 +20,27 @@ This program will sync the give environment in all projects
 
 import argparse
 import datetime
+import time
 import xmlrpc.client
 from argparse import RawTextHelpFormatter
 
 import smtools
 
 __smt = None
+
+def check_build_progress(project_name, project_env):
+    smt.log_info("In progress")
+    try:
+        progress = smt.client.contentmanagement.lookupEnvironment(smt.session, project_name, project_env)
+    except xmlrpc.client.Fault:
+        smt.log_error("Unable to get status for project {} environment {}".format(project_name, project_env))
+    while progress.get('status') == "building":
+        time.sleep(60)
+        smt.log_info("In progress")
+        try:
+            progress = smt.client.contentmanagement.lookupEnvironment(smt.session, project_name, project_env)
+        except xmlrpc.client.Fault:
+            smt.log_error("Unable to get status for project {} environment {}".format(project_name, project_env))
 
 
 def update_environment(args):
@@ -42,34 +57,40 @@ def update_environment(args):
     for project in project_list:
         project_details = None
         try:
-            project_details = smt.client.contentmanagement.listProjectEnvironments(smt.session, project)
+            project_details = smt.client.contentmanagement.listProjectEnvironments(smt.session, project.get('label'))
         except xmlrpc.client.Fault:
-            message = ('Unable to get details of given project {}.'.format(args.project))
+            message = ('Unable to get details of given project {}.'.format(project.get('label')))
             smt.log_error(message)
             break
         number_in_list = 1
         for environment_details in project_details:
             if environment_details.get('label') == args.environment:
-                smt.log_info('Updating environment {} in the project {}.'.format(args.environment, project))
+                smt.log_info('Updating environment {} in the project {}.'.format(args.environment, project.get('label')))
                 dat = ("%s-%02d-%02d" % (datetime.datetime.now().year, datetime.datetime.now().month, datetime.datetime.now().day))
                 build_message = "Created on {}".format(dat)
                 if number_in_list == 1:
+                    project_env = environment_details.get('label')
                     try:
-                        smt.client.contentmanagement.buildProject(smt.session, project, build_message)
+                        smt.client.contentmanagement.buildProject(smt.session, project.get('label'), build_message)
                     except xmlrpc.client.Fault:
                         message = (
-                            'Unable to update environment {} in the project {}.'.format(args.environment, project))
+                            'Unable to update environment {} in the project {}.'.format(args.environment, project.get('label')))
                         smt.fatal_error(message)
+                    check_build_progress(project.get('label'), project_env)
                     break
                 else:
+                    project_env = environment_details.get('label')
                     try:
-                        smt.client.contentmanagement.promoteProject(smt.session, project, environment_details.get('previousEnvironmentLabel'))
+                        smt.client.contentmanagement.promoteProject(smt.session, project.get('label'), environment_details.get('previousEnvironmentLabel'))
                     except xmlrpc.client.Fault:
                         message = (
-                            'Unable to update environment {} in the project {}.'.format(args.environment, project))
+                            'Unable to update environment {} in the project {}.'.format(args.environment, project.get('label')))
                         smt.fatal_error(message)
+                    check_build_progress(project.get('label'), project_env)
                     break
             number_in_list += 1
+
+
 
 
 def main():
