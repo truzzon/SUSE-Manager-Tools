@@ -26,6 +26,7 @@ import xmlrpc.client
 import os
 import datetime
 import smtools
+import time
 
 __smt = None
 
@@ -83,6 +84,7 @@ def rereg_server(args):
                 smt.fatal_error("Given file {} doesn't exists. aborting".format(args.file))
             for line in sf:
                 perform_rereg(line.rstrip(), args.proxy)
+                time.sleep(5)
         else:
             smt.fatal_error("Given file {} doesn't exists. aborting".format(args.file))
 
