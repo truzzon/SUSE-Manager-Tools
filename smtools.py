@@ -50,7 +50,6 @@ else:
     with open(os.path.dirname(__file__) + '/configsm.yaml') as h_cfg:
         CONFIGSM = load_yaml(h_cfg)
 
-
 class SMTools:
     """
     Class to define needed tools.
@@ -101,7 +100,8 @@ class SMTools:
         self.error_text += errtxt
         self.error_text += "\n"
         self.error_found = True
-        logging.warning("| {}".format(errtxt))
+        self.log_error(errtxt)
+        #logging.warning("| {}".format(errtxt))
 
     def fatal_error(self, errtxt, return_code=1):
         """
@@ -136,7 +136,6 @@ class SMTools:
         Send Mail.
         """
         script = os.path.basename(sys.argv[0])
-        # noinspection PyBroadException
         try:
             smtp_connection = smtplib.SMTP(CONFIGSM['smtp']['server'])
         except Exception:
@@ -151,9 +150,7 @@ class SMTools:
         msg['Subject'] = ("[{}] on server {} from {} has errors".format(script, self.hostname, datenow))
         msg['From'] = sender
         msg['To'] = ", ".join(recipients)
-        # noinspection PyBroadException
         try:
-            # noinspection PyUnboundLocalVariable
             smtp_connection.sendmail(sender, recipients, msg.as_string())
         except Exception:
             self.log.error("sending mail failed")

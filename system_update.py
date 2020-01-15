@@ -5,7 +5,7 @@
 # (c) 2018 SUSE Linux GmbH, Germany.
 # GNU Public License. No warranty. No Support (only from SUSE Consulting
 #
-# Version: 2019-04-29
+# Version: 2020-01-15
 #
 # Created by: SUSE Michael Brookhuis
 #
@@ -15,6 +15,7 @@
 #
 # Releases:
 # 2019-04-29 M.Brookhuis - Initial release
+# 2020-01-15 M.Brookhuis - Added update scripts
 #
 #
 
@@ -23,10 +24,12 @@ This script will perform a complete system maintenance
 """
 
 import argparse
-from argparse import RawTextHelpFormatter
-import xmlrpc.client
-import time
 import datetime
+import os
+import time
+import xmlrpc.client
+from argparse import RawTextHelpFormatter
+
 import smtools
 
 __smt = None
@@ -77,7 +80,6 @@ def do_update_minion(system_id, updateble_patches):
     for patch in updateble_patches:
         if "salt" in patch.get('advisory_synopsis').lower():
             patches.append(patch.get('id'))
-            print(patch)
     if not patches:
         smt.log_info('No update for salt-minion"')
         return []
@@ -86,7 +88,6 @@ def do_update_minion(system_id, updateble_patches):
         if patch > idp:
             idp = patch
     patchid = [idp]
-    print(patchid)
     try:
         smt.client.system.scheduleApplyErrata(smt.session, system_id, patchid, datetime.datetime.now())
     except xmlrpc.client.Fault as e:
@@ -478,6 +479,7 @@ def system_is_inactive(system_id):
     """
     Check if the system is not inactive for at least 1 day
     """
+    inactive_systems = None
     try:
         inactive_systems = smt.client.system.listInactiveSystems(smt.session, 1)
     except xmlrpc.client.Fault as e:
@@ -525,6 +527,89 @@ def do_deploy_config(server, sid):
             smt.minor_error("Highstate failed. Please check.")
 
 
+def execute_script(server, sid, script, timeout):
+    """
+    execute _start or _end script
+    """
+    action_id = None
+    try:
+        action_id = smt.client.system.scheduleScriptRun(smt.session, sid, "root", "root", timeout, script,
+                                                        xmlrpc.client.DateTime(datetime.datetime.now()))
+    except xmlrpc.client.Fault:
+        smt.fatal_error("Error running script")
+    timeout = smtools.CONFIGSM['suman']['timeout']
+    (result_failed, result_completed, result_message) = check_progress(action_id, sid, server, timeout,
+                                                                       "Execute Script")
+    if result_completed == 1:
+        smt.log_info("Script execute succesful.")
+    else:
+        smt.log_info("Script failed. Continuing")
+        smt.minor_error("Script failed. Please check.")
+
+
+def read_update_script(phase, filename, script, list_channel):
+    if not os.path.exists(smtools.CONFIGSM['dirs']['update_script_dir'] + "/" + filename):
+        smt.minor_error("There is no update script \'{}\' available for server.".format(filename))
+        return script, list_channel, 60
+    else:
+        with open(smtools.CONFIGSM['dirs']['update_script_dir'] + "/" + filename) as uc_cfg:
+            update_script = smtools.load_yaml(uc_cfg)
+    try:
+        commands = update_script[phase]['commands']
+        for com in commands:
+            script += com.rstrip()
+            script += "\n"
+    except:
+        pass
+    try:
+        states = update_script[phase]['state']
+        for state in states:
+            try:
+                state_exist = smt.client.configchannel.channelExists(smt.session, state)
+            except xmlrpc.client.Fault:
+                smt.log_error("Unable to get state channel information")
+            else:
+                if state_exist == 1:
+                    list_channel.append(state)
+                else:
+                    smt.minor_error("The state configchannel {} doesn't exist".format(state))
+    except:
+        pass
+    return script, list_channel, update_script[phase]['timeout']
+
+
+def do_update_script(server, sid, phase):
+    """
+    execute script before and after maintenance
+    """
+    script = ""
+    list_channel = []
+    (script, list_channel, timeout) = read_update_script(phase, "general", script, list_channel)
+    (script, list_channel, timeout) = read_update_script(phase, server, script, list_channel)
+    if script:
+        smt.log_info("Execute {} update scripts".format(phase))
+        execute_script(server, sid, "#!/bin/bash\n" + script, timeout)
+    else:
+        smt.log_warning("There is no {} update script available for server.".format(phase))
+    if list_channel:
+        list_systems = []
+        list_systems.append(sid)
+        try:
+            smt.client.system.config.addChannels(smt.session, list_systems, list_channel, False)
+        except xmlrpc.client.Fault:
+            smt.minor_error("Unable to add channels")
+        smt.log_info("Performing high state for {} state channels".format(phase))
+        do_deploy_config(server, sid)
+        try:
+            smt.client.system.config.removeChannels(smt.session, list_systems, list_channel)
+        except xmlrpc.client.Fault:
+            smt.minor_error("Unable to remove channels")
+        return True
+    else:
+        smt.log_warning("There is no {} update state configchannel available for server".format(phase))
+        return False
+
+
 def update_server(args):
     """
     start update process
@@ -535,7 +620,10 @@ def update_server(args):
     if system_is_inactive(system_id):
         smt.fatal_error(
             "Server {} is inactive for at least a day. Please check. System will not be updated.".format(args.server))
-    if args.applyconfig:
+    highstate_done = False
+    if args.updatescript:
+        highstate_done = do_update_script(args.server, system_id, "begin")
+    if args.applyconfig and not highstate_done:
         do_deploy_config(args.server, system_id)
     (do_spm, new_basechannel) = check_for_sp_migration(args.server, system_id)
     if do_spm:
@@ -544,7 +632,10 @@ def update_server(args):
     else:
         smt.log_info("Server {} will be upgraded with latest available patches".format(args.server))
         do_upgrade(system_id, args.server, args.noreboot)
-    if args.applyconfig:
+    highstate_done = False
+    if args.updatescript:
+        highstate_done = do_update_script(args.server, system_id, "end")
+    if args.applyconfig and not highstate_done:
         do_deploy_config(args.server, system_id)
 
 
@@ -562,7 +653,9 @@ def main():
                         help="Do not reboot server after patching or supportpack upgrade.")
     parser.add_argument("-c", '--applyconfig', action="store_true", default=0,
                         help="Apply configuration after and before patching")
-    parser.add_argument('--version', action='version', version='%(prog)s 0.0.2, November 16, 2018')
+    parser.add_argument("-u", "--updatescript", action="store_true", default=0,
+                        help="Excute the server specific _start and _end scripts")
+    parser.add_argument('--version', action='version', version='%(prog)s 1.0.1, January 15, 2020')
     args = parser.parse_args()
     if not args.server:
         smt = smtools.SMTools("system_update")

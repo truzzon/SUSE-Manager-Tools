@@ -38,7 +38,7 @@ This script will report all systems with the given CVE(s)
 
 Each script will have a --help to see all available parameters.
 
-More documentation will follow............
+For more information see suse_consulting_scripts_for_suse_manager_server_for_suse_consulting.pdf.
 
 How to use:
 - The file configsm.yaml should be in the same directory as the scripts. And before using check the file and correct the information.

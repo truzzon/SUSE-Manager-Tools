@@ -15,6 +15,7 @@ smtp:
 dirs:
    log_dir: <log dir>
    scripts_dir: /opt/susemanager
+   update_script_dir: /opt/susemanager/update_scripts
 
 maintenance:
    wait_between_systems: 1
