@@ -22,6 +22,10 @@ maintenance:
    exclude_for_patch:
       - lx0001
       - lx0002
+   sp_migration_project:
+      s123: s124
+      s122: s124
+      s150: s151
    sp_migration:
       sles12-sp1: sles12-sp4
       sles12-sp2: sles12-sp4
