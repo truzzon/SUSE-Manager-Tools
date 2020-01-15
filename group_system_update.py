@@ -5,7 +5,7 @@
 # (c) 2018 SUSE Linux GmbH, Germany.
 # GNU Public License. No warranty. No Support (only from SUSE Consulting
 #
-# Version: 2019-04-29
+# Version: 2020-1-15
 #
 # Created by: SUSE Michael Brookhuis
 #
@@ -15,6 +15,7 @@
 #
 # Releases:
 # 2019-11-02 M.Brookhuis - Initial release
+# 2020-01-15 M.Brookhuis - Added update script option.
 #
 #
 
@@ -23,7 +24,6 @@ This script will perform a complete system maintenance
 """
 
 import argparse
-import os
 import subprocess
 import time
 import xmlrpc.client
@@ -49,6 +49,8 @@ def group_update_server(args):
             program_call = smtools.CONFIGSM['dirs']['scripts_dir'] + "/system_update.py -s " + system.get('name')
             if args.applyconfig:
                 program_call += " -c"
+            if args.updatescript:
+                program_call += " -u"
             smt.log_info("Update started for {}".format(system.get('name')))
             print(program_call)
             subprocess.Popen(program_call, shell=True)
@@ -68,7 +70,9 @@ def main():
     parser.add_argument('-g', '--group', help='name of the server to receive config update. Required')
     parser.add_argument("-c", '--applyconfig', action="store_true", default=0,
                         help="Apply configuration after and before patching")
-    parser.add_argument('--version', action='version', version='%(prog)s 0.0.2, November 16, 2018')
+    parser.add_argument("-u", "--updatescript", action="store_true", default=0,
+                        help="Excute the server specific _start and _end scripts")
+    parser.add_argument('--version', action='version', version='%(prog)s 1.0.1, January 16, 2020')
     args = parser.parse_args()
     smt = smtools.SMTools("group_system_update")
     if not args.group:
