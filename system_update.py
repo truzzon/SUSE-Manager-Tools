@@ -5,7 +5,7 @@
 # (c) 2018 SUSE Linux GmbH, Germany.
 # GNU Public License. No warranty. No Support (only from SUSE Consulting
 #
-# Version: 2020-01-15
+# Version: 2020-01-16
 #
 # Created by: SUSE Michael Brookhuis
 #
@@ -16,6 +16,7 @@
 # Releases:
 # 2019-04-29 M.Brookhuis - Initial release
 # 2020-01-15 M.Brookhuis - Added update scripts
+# 2020-01-16 M.Brookhuis - Bug fix: systems with capitals are never found.
 #
 #
 
@@ -655,15 +656,15 @@ def main():
                         help="Apply configuration after and before patching")
     parser.add_argument("-u", "--updatescript", action="store_true", default=0,
                         help="Excute the server specific _start and _end scripts")
-    parser.add_argument('--version', action='version', version='%(prog)s 1.0.1, January 15, 2020')
+    parser.add_argument('--version', action='version', version='%(prog)s 1.0.2, January 16, 2020')
     args = parser.parse_args()
     if not args.server:
         smt = smtools.SMTools("system_update")
         smt.log_error("The option --server is mandatory. Exiting script")
         smt.exit_program(1)
     else:
-        smt = smtools.SMTools("system_update", args.server.lower(), True)
-        smt.set_hostname(args.server.lower())
+        smt = smtools.SMTools("system_update", args.server, True)
+        smt.set_hostname(args.server)
     # login to suse manager
     smt.log_info("Start")
     smt.suman_login()
