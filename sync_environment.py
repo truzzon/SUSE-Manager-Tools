@@ -4,7 +4,7 @@
 # GNU Public License. No warranty. No Support
 # For question/suggestions/bugs mail: michael.brookhuis@suse.com
 #
-# Version: 2019-10-17
+# Version: 2020-02-03
 #
 # Created by: SUSE Michael Brookhuis
 #
@@ -12,6 +12,7 @@
 #
 # Releasmt.session:
 # 2019-10-239M.Brookhuis - initial release.
+# 2020-02-03 M.Brookhuis - Bug fix: there should be no fatal error.
 #
 
 """
@@ -75,7 +76,7 @@ def update_environment(args):
                     except xmlrpc.client.Fault:
                         message = (
                             'Unable to update environment {} in the project {}.'.format(args.environment, project.get('label')))
-                        smt.fatal_error(message)
+                        smt.minor_error(message)
                     check_build_progress(project.get('label'), project_env)
                     break
                 else:
@@ -85,12 +86,10 @@ def update_environment(args):
                     except xmlrpc.client.Fault:
                         message = (
                             'Unable to update environment {} in the project {}.'.format(args.environment, project.get('label')))
-                        smt.fatal_error(message)
+                        smt.minor_error(message)
                     check_build_progress(project.get('label'), project_env)
                     break
             number_in_list += 1
-
-
 
 
 def main():
