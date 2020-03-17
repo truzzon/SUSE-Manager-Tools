@@ -167,6 +167,8 @@ class SMTools:
         self.log.info("| Finished")
         if self.error_found and CONFIGSM['smtp']['sendmail']:
             self.send_mail()
+            if return_code == 0:
+                sys.exit(1)
         sys.exit(return_code)
 
     def exit_program(self, return_code=0):
@@ -174,6 +176,8 @@ class SMTools:
         self.log.info("| Finished")
         if self.error_found and CONFIGSM['smtp']['sendmail']:
             self.send_mail()
+            if return_code == 0:
+                sys.exit(1)
         sys.exit(return_code)
 
     def suman_login(self):
