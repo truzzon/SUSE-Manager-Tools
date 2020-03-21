@@ -4,15 +4,16 @@
 # GNU Public License. No warranty. No Support
 # For question/suggestions/bugs mail: michael.brookhuis@suse.com
 #
-# Version: 2020-02-03
+# Version: 2020-03-21
 #
 # Created by: SUSE Michael Brookhuis
 #
 # This script will clone channels from the give environment.
 #
-# Releasmt.session:
-# 2019-10-239M.Brookhuis - initial release.
+# Release:
+# 2019-10-23 M.Brookhuis - initial release.
 # 2020-02-03 M.Brookhuis - Bug fix: there should be no fatal error.
+# 2020-03-21 M.Brookhuis - RC 1 if there has been an error
 #
 
 """
@@ -49,6 +50,7 @@ def update_environment(args):
     Updating an environment within a project
     """
     project_list = None
+    environment_found = False
     try:
         project_list = smt.client.contentmanagement.listProjects(smt.session)
     except xmlrpc.client.Fault:
@@ -66,6 +68,7 @@ def update_environment(args):
         number_in_list = 1
         for environment_details in project_details:
             if environment_details.get('label') == args.environment:
+                environment_found = True
                 smt.log_info('Updating environment {} in the project {}.'.format(args.environment, project.get('label')))
                 dat = ("%s-%02d-%02d" % (datetime.datetime.now().year, datetime.datetime.now().month, datetime.datetime.now().day))
                 build_message = "Created on {}".format(dat)
@@ -90,6 +93,8 @@ def update_environment(args):
                     check_build_progress(project.get('label'), project_env)
                     break
             number_in_list += 1
+    if not environment_found:
+        smt.minor_error("The given environment {} does not exist".format(args.environment))
 
 
 def main():

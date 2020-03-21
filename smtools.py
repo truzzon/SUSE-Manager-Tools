@@ -5,7 +5,7 @@
 # (c) 2013 SUSE Linux GmbH, Germany.
 # GNU Public License. No warranty. No Support (only from SUSE Consulting)
 #
-# Version: 2017-10-11
+# Version: 2020-03-21
 #
 # Created by: SUSE Michael Brookhuis,
 #
@@ -15,6 +15,7 @@
 # 2017-10-14 M.Brookhuis - initial release.
 # 2018-11-15 M.Brookhuis - Moved to python3.
 #                        - Moved config to YAML
+# 2020-03-21 M.Brookhuis - RC 1 if there has been an error
 #
 # coding: utf-8
 
@@ -165,8 +166,9 @@ class SMTools:
         """Close program and send mail if there is an error"""
         self.suman_logout()
         self.log.info("| Finished")
-        if self.error_found and CONFIGSM['smtp']['sendmail']:
-            self.send_mail()
+        if self.error_found:
+            if CONFIGSM['smtp']['sendmail']:
+                self.send_mail()
             if return_code == 0:
                 sys.exit(1)
         sys.exit(return_code)
@@ -174,8 +176,9 @@ class SMTools:
     def exit_program(self, return_code=0):
         """Exit program and send mail if there is an error"""
         self.log.info("| Finished")
-        if self.error_found and CONFIGSM['smtp']['sendmail']:
-            self.send_mail()
+        if self.error_found:
+            if CONFIGSM['smtp']['sendmail']:
+                self.send_mail()
             if return_code == 0:
                 sys.exit(1)
         sys.exit(return_code)
