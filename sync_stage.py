@@ -16,6 +16,7 @@
 #                        - Added logging
 # 2019-02-10 M.Brookhuis - General update
 # 2019-10-17 M.Brookhuis - Added support for projects and environments
+# 2020-03-23 M.Brookhuis - Added backup option
 
 """
 This program will sync the give channel
@@ -43,13 +44,13 @@ def create_backup(par):
     except xmlrpc.client.Fault:
         smt.log_info("Creating backup of current channel. Channel will be called with: {}".format(clo))
     else:
-        smt.fatal_error('The backupchannel {} already exists. Aborting operation.'.format(clo))
+        smt.minor_error('The backupchannel {} already exists. Aborting operation.'.format(clo))
     clo = "bu-" + dat + "-" + par
     clo_str = {'name': clo, 'label': clo, 'summary': clo}
     try:
         smt.client.channel.software.clone(smt.session, par, clo_str, False)
     except xmlrpc.client.Fault:
-        smt.fatal_error('Unable to create backup. Please check logs')
+        smt.minor_error('Unable to create backup. Please check logs')
     child_channels = None
     try:
         child_channels = smt.client.channel.software.listChildren(smt.session, par)
@@ -108,9 +109,28 @@ def update_project(args):
         smt.fatal_error(message)
     number_in_list = 1
     for environment_details in project_details:
-        if environment_details.get('label') == args.environment:
+        if environment_details.get('label') == args.environment.rstrip():
             environment_present = True
             smt.log_info('Updating environment {} in the project {}.'.format(args.environment, args.project))
+            if args.backup:
+                channel_start = args.project + "-" + args.environment
+                try:
+                    all_channels = smt.client.channel.listSoftwareChannels(smt.session)
+                except xmlrpc.client.Fault as e:
+                    smtools.fatal_error(
+                        "Unable to connect SUSE Manager to login to get a list of all software channels")
+                all_channels_label = [c.get('label') for c in all_channels]
+                for channel in all_channels_label:
+                    if channel.startswith(channel_start):
+                        try:
+                            channel_details = smt.client.channel.software.getDetails(smt.session, channel)
+                        except xmlrpc.client.Fault as e:
+                            smtools.fatal_error(
+                                "Unable to connect SUSE Manager to login to get a list of all software channels")
+#                        if not channel_start in channel_details.get('parent_channel_label') and not "bu-" in channel_details.get('parent_channel_label'):
+                        if not channel_details.get('parent_channel_label').startswith(channel_start):
+                            create_backup(channel)
+                            break
             if args.message:
                 build_message = args.message
             else:
@@ -184,7 +204,7 @@ def main():
     parser.add_argument("-p", "--project", help="name of the project to be updated. --environment is also mandatory")
     parser.add_argument("-e", "--environment", help="the project to be updated. Mandatory with --project")
     parser.add_argument("-m", "--message", help="Message to be displayed when build is updated")
-    parser.add_argument('--version', action='version', version='%(prog)s 1.0.2, October 17, 2019')
+    parser.add_argument('--version', action='version', version='%(prog)s 1.0.3, March 23, 2020')
     args = parser.parse_args()
     smt.suman_login()
     if args.channel:
