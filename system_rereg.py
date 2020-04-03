@@ -5,7 +5,7 @@
 # (c) 2018 SUSE Linux GmbH, Germany.
 # GNU Public License. No warranty. No Support (only from SUSE Consulting
 #
-# Version: 2019-04-29
+# Version: 2020-04-2
 #
 # Created by: SUSE Michael Brookhuis
 #
@@ -13,7 +13,7 @@
 #
 # Releases:
 # 2019-12-11 M.Brookhuis - Initial release
-#
+# 2020-04-02 M.Brookhuis - Minor changes
 #
 
 """
@@ -103,7 +103,7 @@ def main():
                         help='name of the proxy server the system should be registered against. Required')
     parser.add_argument('-f', '--file',
                         help='file with list of servers to be re-registered. There should be 1 server per line')
-    parser.add_argument('--version', action='version', version='%(prog)s 0.0.1, December 11, 2019')
+    parser.add_argument('--version', action='version', version='%(prog)s 0.0.2, April 2, 2020')
     args = parser.parse_args()
     smt = smtools.SMTools("system_update")
     if not args.proxy:
