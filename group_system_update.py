@@ -53,6 +53,8 @@ def group_update_server(args):
                 program_call += " -u"
             if args.noreboot:
                 program_call += " -n"
+            if args.forcereboot:
+                program_call += " -f"
             smt.log_info("Update started for {}".format(system.get('name')))
             print(program_call)
             subprocess.Popen(program_call, shell=True)
@@ -76,6 +78,8 @@ def main():
                         help="Excute the server specific _start and _end scripts")
     parser.add_argument("-n", "--noreboot", action="store_true", default=0,
                         help="Do not reboot server after patching or supportpack upgrade.")
+    parser.add_argument("-f", "--forcereboot", action="store_true", default=0,
+                        help="Force a reboot server after patching or supportpack upgrade.")
     parser.add_argument('--version', action='version', version='%(prog)s 1.0.1, January 16, 2020')
     args = parser.parse_args()
     smt = smtools.SMTools("group_system_update")

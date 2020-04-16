@@ -152,7 +152,7 @@ def do_apply_updates_packages(system_id):
     return schedule_id
 
 
-def do_upgrade(system_id, server, no_reboot):
+def do_upgrade(system_id, server, no_reboot, force_reboot):
     """
     do upgrade of packages
     """
@@ -170,7 +170,10 @@ def do_upgrade(system_id, server, no_reboot):
     else:
         smt.log_info('no errata updates available')
         schedule_id = 0
-        reboot_needed_errata = False
+        if force_reboot:
+            reboot_needed_errata = True
+        else:
+            reboot_needed_errata = False
     reboot_needed_package = True
     if schedule_id == 0:
         smt.log_info("Errata update not needed. Checking for package update")
@@ -237,7 +240,7 @@ def do_upgrade(system_id, server, no_reboot):
     return
 
 
-def do_spmigrate(system_id, server, new_basechannel, no_reboot):
+def do_spmigrate(system_id, server, new_basechannel, no_reboot, force_reboot):
     """
     Perform a sp migration for the given server
     """
@@ -278,7 +281,7 @@ def do_spmigrate(system_id, server, new_basechannel, no_reboot):
     for channel in new_child_channels:
         if check_channel(channel, all_child_channels):
             checked_new_child_channels.append(channel)
-    do_upgrade(system_id, server, False)
+    do_upgrade(system_id, server, False, False)
     time.sleep(30)
     try:
         action_id = smt.client.system.scheduleSPMigration(smt.session, system_id, new_basechannel,
@@ -591,7 +594,7 @@ def do_update_script(server, sid, phase):
         smt.log_info("Execute {} update scripts".format(phase))
         execute_script(server, sid, "#!/bin/bash\n" + script, timeout)
     else:
-        smt.log_warning("There is no {} update script available for server.".format(phase))
+        smt.log_info("There is no {} update script available for server.".format(phase))
     if list_channel:
         list_systems = []
         list_systems.append(sid)
@@ -607,7 +610,7 @@ def do_update_script(server, sid, phase):
             smt.minor_error("Unable to remove channels")
         return True
     else:
-        smt.log_warning("There is no {} update state configchannel available for server".format(phase))
+        smt.log_info("There is no {} update state configchannel available for server".format(phase))
         return False
 
 
@@ -629,15 +632,17 @@ def update_server(args):
     (do_spm, new_basechannel) = check_for_sp_migration(args.server, system_id)
     if do_spm:
         smt.log_info("Server {} will get a SupportPack Migration to {} ".format(args.server, new_basechannel))
-        do_spmigrate(system_id, args.server, new_basechannel, args.noreboot)
+        do_spmigrate(system_id, args.server, new_basechannel, args.noreboot, args.forcereboot)
     else:
         smt.log_info("Server {} will be upgraded with latest available patches".format(args.server))
-        do_upgrade(system_id, args.server, args.noreboot)
+        do_upgrade(system_id, args.server, args.noreboot, args.forcereboot)
     highstate_done = False
     if args.updatescript:
         highstate_done = do_update_script(args.server, system_id, "end")
     if args.applyconfig and not highstate_done:
         do_deploy_config(args.server, system_id)
+
+
 
 
 def main():
@@ -652,6 +657,8 @@ def main():
     parser.add_argument('-s', '--server', help='name of the server to receive config update. Required')
     parser.add_argument("-n", "--noreboot", action="store_true", default=0,
                         help="Do not reboot server after patching or supportpack upgrade.")
+    parser.add_argument("-f", "--forcereboot", action="store_true", default=0,
+                        help="Force a reboot server after patching or supportpack upgrade.")
     parser.add_argument("-c", '--applyconfig', action="store_true", default=0,
                         help="Apply configuration after and before patching")
     parser.add_argument("-u", "--updatescript", action="store_true", default=0,
