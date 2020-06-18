@@ -66,7 +66,7 @@ def do_apply_updates_errata(system_id, updateble_patches, salt_minion_patch_id, 
     return schedule_id[0]
 
 
-def do_update_minion(system_id, updateble_patches):
+def do_update_minion(system_id, updateble_patches, server):
     """
     schedule action chain with updates for errata
     """
@@ -90,20 +90,26 @@ def do_update_minion(system_id, updateble_patches):
             idp = patch
     patchid = [idp]
     try:
-        smt.client.system.scheduleApplyErrata(smt.session, system_id, patchid, datetime.datetime.now())
+        schedule_id = smt.client.system.scheduleApplyErrata(smt.session, system_id, patchid, datetime.datetime.now())
     except xmlrpc.client.Fault as e:
         smt.fatal_error("unable to schedule job for server. Error: {}".format(e))
     smt.log_info("Updating salt-minion")
-    time.sleep(30)
+    timeout = smtools.CONFIGSM['suman']['timeout']
+    (result_failed, result_completed, result_message) = check_progress(schedule_id, system_id, server, timeout, "SALT Minion Update")
+    if result_completed == 1:
+        smt.log_info("SALT Minion update completed successful.")
+    else:
+        smt.fatal_error(
+            "Errata update failed!!!!! Server {} will not be updated!\n\nThe error messages is:\n{}".format(server, result_message))
     try:
         smt.client.system.schedulePackageRefresh(smt.session, system_id, datetime.datetime.now())
     except xmlrpc.client.Fault:
-        smt.fatal_error("Package refresh failed for system ")
-    time.sleep(15)
+        smt.fatal_error("Package refresh failed for system %s!".format(server))
+    time.sleep(30)
     return patches
 
 
-def do_update_zypper(system_id, updateble_patches):
+def do_update_zypper(system_id, updateble_patches, server):
     """
     schedule action chain with updates for errata
     """
@@ -115,16 +121,22 @@ def do_update_zypper(system_id, updateble_patches):
         smt.log_info('No update for zypper"')
         return []
     try:
-        smt.client.system.scheduleApplyErrata(smt.session, system_id, patches, datetime.datetime.now())
+        schedule_id = smt.client.system.scheduleApplyErrata(smt.session, system_id, patches, datetime.datetime.now())
     except xmlrpc.client.Fault as e:
         smt.fatal_error("unable to schedule job for server. Error: {}".format(e))
     smt.log_info("Updating zypper")
-    time.sleep(30)
+    timeout = smtools.CONFIGSM['suman']['timeout']
+    (result_failed, result_completed, result_message) = check_progress(schedule_id, system_id, server, timeout, "SALT Minion Update")
+    if result_completed == 1:
+        smt.log_info("SALT Minion update completed successful.")
+    else:
+        smt.fatal_error(
+            "Errata update failed!!!!! Server {} will not be updated!\n\nThe error messages is:\n{}".format(server, result_message))
     try:
         smt.client.system.schedulePackageRefresh(smt.session, system_id, datetime.datetime.now())
     except xmlrpc.client.Fault:
-        smt.fatal_error("Package refresh failed for system")
-    time.sleep(15)
+        smt.fatal_error("Package refresh failed for system %s!".format(server))
+    time.sleep(30)
     return patches
 
 
@@ -163,8 +175,8 @@ def do_upgrade(system_id, server, no_reboot, force_reboot):
     except xmlrpc.client.Fault:
         smt.fatal_error("Unable to get a list of updatable rpms")
     if updateble_patches:
-        salt_minion_patch_id = do_update_minion(system_id, updateble_patches)
-        zypper_patch_id = do_update_zypper(system_id, updateble_patches)
+        salt_minion_patch_id = do_update_minion(system_id, updateble_patches, server)
+        zypper_patch_id = do_update_zypper(system_id, updateble_patches, server)
         schedule_id = do_apply_updates_errata(system_id, updateble_patches, salt_minion_patch_id, zypper_patch_id)
         reboot_needed_errata = True
     else:
@@ -596,7 +608,7 @@ def do_update_script(server, sid, phase):
     else:
         smt.log_info("There is no {} update script available for server.".format(phase))
     if list_channel:
-        list_systems = []
+        list_systems = None
         list_systems.append(sid)
         try:
             smt.client.system.config.addChannels(smt.session, list_systems, list_channel, False)
