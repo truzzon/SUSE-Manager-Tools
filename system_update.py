@@ -17,6 +17,7 @@
 # 2019-04-29 M.Brookhuis - Initial release
 # 2020-01-15 M.Brookhuis - Added update scripts
 # 2020-01-16 M.Brookhuis - Bug fix: systems with capitals are never found.
+# 2020-06-24 M.Brookhuis - Bug fix: unable to perform an SP Migration whilst skipping SPs
 #
 #
 
