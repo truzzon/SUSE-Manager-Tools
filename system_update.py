@@ -99,8 +99,7 @@ def do_update_minion(system_id, updateble_patches, server):
     if result_completed == 1:
         smt.log_info("SALT Minion update completed successful.")
     else:
-        smt.fatal_error(
-            "Errata update failed!!!!! Server {} will not be updated!\n\nThe error messages is:\n{}".format(server, result_message))
+        smt.minor_error("Errata update failed!!!!! Server {} will not be updated!\n\nThe error messages is:\n{}".format(server, result_message))
     try:
         smt.client.system.schedulePackageRefresh(smt.session, system_id, datetime.datetime.now())
     except xmlrpc.client.Fault:
@@ -130,8 +129,7 @@ def do_update_zypper(system_id, updateble_patches, server):
     if result_completed == 1:
         smt.log_info("SALT Minion update completed successful.")
     else:
-        smt.fatal_error(
-            "Errata update failed!!!!! Server {} will not be updated!\n\nThe error messages is:\n{}".format(server, result_message))
+        smt.fatal_error("Errata update failed!!!!! Server {} will not be updated!\n\nThe error messages is:\n{}".format(server, result_message))
     try:
         smt.client.system.schedulePackageRefresh(smt.session, system_id, datetime.datetime.now())
     except xmlrpc.client.Fault:
@@ -274,8 +272,7 @@ def do_spmigrate(system_id, server, new_basechannel, no_reboot, force_reboot):
         smt.log_info("There is a newer SP available, but that has not been setup for the stage the server is in")
         return
     try:
-        new_child_channels = [c.get('label').replace(sp_old, sp_new) for c in
-                              smt.client.system.listSubscribedChildChannels(smt.session, system_id)]
+        new_child_channels = [c.get('label').replace(sp_old, sp_new) for c in smt.client.system.listSubscribedChildChannels(smt.session, system_id)]
     except xmlrpc.client.Fault:
         smt.fatal_error("Getting new child channels for the system {} failed!".format(server))
     if smtools.CONFIGSM['maintenance']['sp_migration_project']:
@@ -286,8 +283,7 @@ def do_spmigrate(system_id, server, new_basechannel, no_reboot, force_reboot):
                     temp_child_channels.append(child_channel.replace(project, new_pr))
         new_child_channels = temp_child_channels
     try:
-        all_child_channels = [c.get('label') for c in
-                              smt.client.channel.software.listChildren(smt.session, new_basechannel)]
+        all_child_channels = [c.get('label') for c in smt.client.channel.software.listChildren(smt.session, new_basechannel)]
     except xmlrpc.client.Fault:
         smt.fatal_error("Getting all child channels failed!")
     for channel in new_child_channels:
@@ -295,26 +291,27 @@ def do_spmigrate(system_id, server, new_basechannel, no_reboot, force_reboot):
             checked_new_child_channels.append(channel)
     do_upgrade(system_id, server, False, False)
     time.sleep(30)
+    spident = None
+    for migration_target in migration_targets:
+        if sp_new.upper() in migration_target['friendly']:
+            spident = migration_target['ident']
+            break
     try:
-        action_id = smt.client.system.scheduleSPMigration(smt.session, system_id, new_basechannel,
-                                                          checked_new_child_channels,
-                                                          True, datetime.datetime.now())
+        action_id = smt.client.system.scheduleSPMigration(smt.session, system_id, spident, new_basechannel, checked_new_child_channels, True, datetime.datetime.now())
     except xmlrpc.client.Fault:
         smt.fatal_error(
             "Unable to schedule dry run for Support Pack migration for system {} failed!\nThe error is: {}".format(
                 server, get_script_output(action_id)))
     smt.log_info("SupportPack Migration dry run running for system {}".format(server))
     smt.log_info("New basechannel will be: {}".format(new_basechannel))
-    time.sleep(60)
+    time.sleep(30)
     timeout = smtools.CONFIGSM['suman']['timeout'] - 90
     (result_failed, result_completed, result_message) = check_progress(action_id, system_id, server, timeout,
                                                                        "SP Migration dry run")
     res_o = get_spmig_details(action_id, system_id, server)
     if result_failed == 0:
         try:
-            action_id = smt.client.system.scheduleSPMigration(smt.session, system_id, new_basechannel,
-                                                              checked_new_child_channels, False,
-                                                              datetime.datetime.now())
+            action_id = smt.client.system.scheduleSPMigration(smt.session, system_id, spident, new_basechannel, checked_new_child_channels, False, datetime.datetime.now())
         except xmlrpc.client.Fault as e:
             smt.fatal_error(
                 "Unable to schedule Support Pack migration for system {} failed!\nThe error is: {}".format(server, e))
@@ -403,11 +400,13 @@ def check_spmigration_available(system_id, base_channel):
         migration_targets = smt.client.system.listMigrationTargets(smt.session, system_id)
     except xmlrpc.client.Fault as e:
         smt.fatal_error(("Unable to receive SP Migration targets. Error: \n{}".format(e)))
-    sp = "sp" + str(int(base_channel.get('label').split("sp")[1][:1]) + 1)
-    for x in migration_targets:
-        if sp.lower() in x.get('friendly').lower():
-            return True, migration_targets
-    return False, migration_targets
+    #sp = "sp" + str(int(base_channel.get('label').split("sp")[1][:1]) + 1)
+    #for x in migration_targets:
+    #    if sp.lower() in x.get('friendly').lower():
+    if migration_targets:
+        return True, migration_targets
+    else:
+        return False, migration_targets
 
 
 def check_for_sp_migration(server, sid):
@@ -433,14 +432,34 @@ def check_for_sp_migration(server, sid):
     else:
         current_sp = "sp" + str(current_bc.split("sp")[1].split("-")[0])
     current_version += current_sp
+    try:
+        all_channels = smt.client.channel.listSoftwareChannels(smt.session)
+    except xmlrpc.client.Fault:
+        smt.fatal_error("Unable to connect SUSE Manager to login to get list of all channels")
+    all_bc = []
+    for bc in all_channels:
+        if not bc.get('parent_label'):
+            all_bc.append(bc.get('label'))
     if smtools.CONFIGSM['maintenance']['sp_migration_project']:
         for project, new_pr in smtools.CONFIGSM['maintenance']['sp_migration_project'].items():
             if server_is_exception(server, new_pr):
                 return False, ""
-            if project == current_bc.split("-")[0] and not server_is_exception(server, new_pr):
-                current_bc = current_bc.replace(project, new_pr)
-                new_sp = "sp" + str(int(current_bc.split('sp')[1].split('-')[0]) + 1)
-                return True, current_bc.replace(current_sp, new_sp)
+            try:
+                project_environments = smt.client.contentmanagement.listProjectEnvironments(smt.session, project)
+            except xmlrpc.client.Fault:
+                continue
+            for env in project_environments:
+                calc_current_bc = project + "-" + env['label']
+                if calc_current_bc in current_bc.split('sp')[0]:
+                    part_new_bc = current_bc.split('sp')[0].replace(project, new_pr)
+                    new_base_channel = None
+                    for bc in all_bc:
+                        if part_new_bc in bc:
+                            new_base_channel = bc
+                            return True, new_base_channel
+                    if not new_base_channel:
+                        smt.log_info("Given SP Migration path is not available. There are no channels available.")
+                        return False, ""
     if smtools.CONFIGSM['maintenance']['sp_migration']:
         for key, value in smtools.CONFIGSM['maintenance']['sp_migration'].items():
             if key == current_version and not server_is_exception(server, value):
