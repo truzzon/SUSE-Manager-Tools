@@ -2,7 +2,7 @@ suman:
     server: <suse manager server fqdn>
     user: <user with enough write to perform actions>
     password: <password>
-    timeout: 60
+    timeout: 1200
 
 smtp:
    # sendmail: True is a mail should be send for minor and major errors. False if no mail should be send     
